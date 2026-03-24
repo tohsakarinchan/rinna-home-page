@@ -1,5 +1,6 @@
 import { createApp } from 'vue'
-import App from './App.vue'
+import RootApp from './RootApp.vue'
+import router from './router/index.js'
 
 // Vuetify
 import 'vuetify/styles'
@@ -21,7 +22,9 @@ const vuetify = createVuetify({
         },
     },
 })
-const app = createApp(App);
-app.config.warnHandler = () => {};
-app.use(vuetify).mount('#app')
+const app = createApp(RootApp);
+app.config.warnHandler = () => { };
+app.use(vuetify).use(router).mount('#app')
+
+
 

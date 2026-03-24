@@ -105,6 +105,20 @@
                         </v-speed-dial>
                     </v-col>
                     </v-row>
+
+                    <!-- 旅游博客入口 -->
+                    <v-row align="center" justify="center" class="mt-1 mb-2">
+                    <v-col cols="auto">
+                        <v-btn
+                        :to="'/blog'"
+                        variant="tonal"
+                        color="var(--leleo-vcard-color)"
+                        rounded="pill"
+                        prepend-icon="mdi-airplane"
+                        class="blog-entry-btn"
+                        >旅游日记</v-btn>
+                    </v-col>
+                    </v-row>
                 </v-container>
             </v-col>
 
@@ -259,4 +273,14 @@
 <style scoped>
   @import url(/css/app.less);
   @import url(/css/mobile.less);
+
+  .blog-entry-btn {
+    backdrop-filter: blur(var(--leleo-blur));
+    letter-spacing: 0.05em;
+    transition: transform 0.2s, opacity 0.2s;
+  }
+  .blog-entry-btn:hover {
+    transform: translateY(-2px);
+    opacity: 0.9;
+  }
 </style>

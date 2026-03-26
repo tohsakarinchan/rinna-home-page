@@ -2,8 +2,8 @@
     <div class="blog-bg">
         <v-container class="py-8" style="max-width: 860px;">
 
-            <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/blog" class="mb-6">
-                返回列表
+            <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/" class="mb-6">
+                返回主页
             </v-btn>
 
             <!-- 加载中 -->

@@ -6,11 +6,31 @@
                 <v-icon icon="mdi-airplane" class="mr-2"></v-icon>
                 <span>旅游日记</span>
             </div>
+
+            <!-- 搜索框 -->
+            <div class="blog-search-input-wrap">
+                <v-text-field v-model="searchQuery" placeholder="搜索标题、摘要、标签..." variant="outlined" rounded hide-details
+                    density="compact" clearable class="blog-search-field" @click:clear="onClear">
+                    <template v-slot:prepend-inner>
+                        <v-icon size="16" style="opacity: 0.6;">mdi-magnify</v-icon>
+                    </template>
+                </v-text-field>
+            </div>
         </div>
+
+        <!-- 当前搜索关键词提示 -->
+        <transition name="fade-hint">
+            <div v-if="searchQuery.trim()" class="search-hint">
+                <v-icon size="13" class="mr-1">mdi-text-search</v-icon>
+                搜索「{{ searchQuery.trim() }}」，共找到
+                <strong>{{ filteredPosts.length }}</strong> 篇文章
+                <span v-if="activeTag" style="opacity:0.7;">（已筛选标签：{{ activeTag }}）</span>
+            </div>
+        </transition>
 
         <v-container fluid class="pa-0">
             <v-row class="ma-0">
-                <!-- 左侧文章列表区域 (手机端排第二，PC端排第一) -->
+                <!-- 左侧文章列表区域 -->
                 <v-col cols="12" md="9" lg="9" class="pa-0 pr-md-4 order-last order-md-first">
                     <!-- 加载中 -->
                     <div v-if="loading">
@@ -47,11 +67,14 @@
                                                 post.date
                                             }}</span>
                                         </div>
-                                        <div class="blog-inline-title">{{ post.title }}</div>
-                                        <div class="blog-inline-summary">{{ post.summary }}</div>
+                                        <!-- 标题：搜索时高亮关键词 -->
+                                        <div class="blog-inline-title" v-html="highlight(post.title)"></div>
+                                        <!-- 摘要：搜索时高亮关键词 -->
+                                        <div class="blog-inline-summary" v-html="highlight(post.summary)"></div>
                                         <div class="mt-1">
                                             <v-chip v-for="tag in post.tags" :key="tag" size="x-small" class="mr-1"
-                                                variant="tonal">{{ tag }}</v-chip>
+                                                :variant="activeTag === tag ? 'elevated' : 'tonal'"
+                                                @click.prevent="activeTag = tag">{{ tag }}</v-chip>
                                         </div>
                                     </v-card-text>
                                 </v-card>
@@ -61,11 +84,13 @@
                         <!-- 空状态 -->
                         <div v-else class="text-center py-10">
                             <v-icon size="48" opacity="0.3">mdi-post-outline</v-icon>
-                            <p class="mt-3" style="opacity:0.5">暂无文章</p>
+                            <p class="mt-3" style="opacity:0.5">
+                                {{ searchQuery.trim() ? '没有找到相关文章' : '暂无文章' }}
+                            </p>
                         </div>
 
-                        <!-- 加载更多按钮 -->
-                        <div v-if="hasMore && !activeTag" class="text-center mt-4 mb-2">
+                        <!-- 搜索中不显示加载更多 -->
+                        <div v-if="hasMore && !activeTag && !searchQuery.trim()" class="text-center mt-4 mb-2">
                             <v-btn variant="tonal" :loading="loadingMore" @click="loadMore">
                                 加载更多
                                 <v-icon end>mdi-chevron-down</v-icon>
@@ -74,7 +99,7 @@
                     </div>
                 </v-col>
 
-                <!-- 右侧标签栏 (手机端排第一，PC端排第二) -->
+                <!-- 右侧标签栏 -->
                 <v-col cols="12" md="3" lg="3" :class="xs || sm ? 'px-2 mt-0 mb-4' : 'pa-0'"
                     class="order-first order-md-last">
                     <div class="tag-filters-container sticky-sidebar mx-0">
@@ -110,6 +135,46 @@ const hasMore = ref(false)
 const nextCursor = ref(null)
 const PAGE_SIZE = 6
 
+// 搜索状态
+const searchQuery = ref('')
+
+function onClear() {
+    searchQuery.value = ''
+}
+
+/**
+ * 将查询字符串拆成词组，对文本做大小写不敏感的模糊匹配
+ * 返回是否命中
+ */
+function fuzzyMatch(text = '', query = '') {
+    if (!query.trim()) return true
+    const terms = query.trim().toLowerCase().split(/\s+/)
+    const t = text.toLowerCase()
+    return terms.every(term => t.includes(term))
+}
+
+/**
+ * 在文本中高亮匹配的关键词（返回 HTML 字符串）
+ */
+function highlight(text = '') {
+    if (!searchQuery.value.trim()) return escapeHtml(text)
+    const terms = searchQuery.value.trim().split(/\s+/).filter(Boolean)
+    let result = escapeHtml(text)
+    terms.forEach(term => {
+        const reg = new RegExp(`(${escapeReg(term)})`, 'gi')
+        result = result.replace(reg, '<mark class="search-highlight">$1</mark>')
+    })
+    return result
+}
+
+function escapeHtml(str = '') {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function escapeReg(str = '') {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 const allTags = computed(() => {
     const set = new Set()
     posts.value.forEach(p => p.tags.forEach(t => set.add(t)))
@@ -117,27 +182,40 @@ const allTags = computed(() => {
 })
 
 const filteredPosts = computed(() => {
-    if (!activeTag.value) return posts.value
-    return posts.value.filter(p => p.tags.includes(activeTag.value))
+    let list = posts.value
+
+    // 标签筛选
+    if (activeTag.value) {
+        list = list.filter(p => p.tags.includes(activeTag.value))
+    }
+
+    // 关键词搜索：匹配标题、摘要、标签
+    const q = searchQuery.value.trim()
+    if (q) {
+        list = list.filter(p =>
+            fuzzyMatch(p.title, q) ||
+            fuzzyMatch(p.summary, q) ||
+            p.tags.some(t => fuzzyMatch(t, q))
+        )
+    }
+
+    return list
 })
 
-// 初始加载
 async function fetchPosts(cursor = null) {
     const params = new URLSearchParams({ page_size: PAGE_SIZE })
     if (cursor) params.append('cursor', cursor)
-
     const res = await fetch(`/api/blog-list?${params}`)
     const data = await res.json()
     return data
 }
 
-// 加载更多
 async function loadMore() {
     if (!hasMore.value || loadingMore.value) return
     loadingMore.value = true
     try {
         const data = await fetchPosts(nextCursor.value)
-        posts.value = [...posts.value, ...data.posts]  // 追加到现有列表
+        posts.value = [...posts.value, ...data.posts]
         hasMore.value = data.has_more
         nextCursor.value = data.next_cursor
     } catch (e) {
@@ -166,6 +244,7 @@ onMounted(async () => {
     display: flex;
     align-items: center;
     margin: 12px 12px 16px 12px;
+    gap: 4px;
 }
 
 .blog-section-title {
@@ -177,6 +256,49 @@ onMounted(async () => {
     letter-spacing: 0.05em;
 }
 
+.blog-search-input-wrap {
+    width: 220px;
+}
+
+.blog-search-field :deep(.v-field) {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(10px);
+}
+
+.blog-search-field :deep(.v-field__outline) {
+    --v-field-border-opacity: 0.25;
+}
+
+/* 搜索命中数提示 */
+.search-hint {
+    margin: 0 12px 10px;
+    font-size: 0.78rem;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+}
+
+.fade-hint-enter-active,
+.fade-hint-leave-active {
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.fade-hint-enter-from,
+.fade-hint-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}
+
+/* 关键词高亮 */
+:deep(.search-highlight) {
+    background: var(--leleo-vcard-color);
+    color: #000;
+    border-radius: 2px;
+    padding: 0 2px;
+    font-style: normal;
+}
+
+/* 标签栏 */
 .tag-filters-container {
     display: flex;
     flex-direction: column;
@@ -206,6 +328,7 @@ onMounted(async () => {
     align-items: flex-start;
 }
 
+/* 卡片 */
 .blog-inline-card {
     transition: transform 0.2s;
     text-decoration: none;

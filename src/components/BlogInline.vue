@@ -28,10 +28,26 @@
             </div>
         </transition>
 
+        <JapanPrefectureMap class="blog-map-section" :visited-prefectures="visitedPrefectures"
+            :active-prefecture="activeTagNormalized" @select="onSelectPrefecture"></JapanPrefectureMap>
+
+        <div class="tag-filters-container">
+            <span class="tag-label">
+                <v-icon size="small" class="mr-1">mdi-tag-multiple</v-icon>
+                游记标签
+            </span>
+            <div class="tag-filters">
+                <v-chip class="mr-1 mb-1" size="small" :variant="activeTag === '' ? 'elevated' : 'tonal'"
+                    @click="activeTag = ''">全部</v-chip>
+                <v-chip v-for="tag in allTags" :key="tag" class="mr-1 mb-1" size="small"
+                    :variant="isTagActive(tag) ? 'elevated' : 'tonal'" @click="activeTag = tag">{{ tag }}</v-chip>
+            </div>
+        </div>
+
         <v-container fluid class="pa-0">
             <v-row class="ma-0">
-                <!-- 左侧文章列表区域 -->
-                <v-col cols="12" md="9" lg="9" class="pa-0 pr-md-4 order-last order-md-first">
+                <!-- 文章列表区域 -->
+                <v-col cols="12" class="pa-0">
                     <!-- 加载中 -->
                     <div v-if="loading">
                         <v-row class="ma-0">
@@ -99,27 +115,6 @@
                     </div>
                 </v-col>
 
-                <!-- 右侧标签栏 -->
-                <v-col cols="12" md="3" lg="3" :class="xs || sm ? 'px-2 mt-0 mb-4' : 'pa-0'"
-                    class="order-first order-md-last">
-                    <div class="sticky-sidebar mx-0">
-                        <div class="tag-filters-container">
-                        <span class="tag-label">
-                            <v-icon size="small" class="mr-1">mdi-tag-multiple</v-icon>
-                            游记标签
-                        </span>
-                        <div class="tag-filters">
-                            <v-chip class="mr-1 mb-1" size="small" :variant="activeTag === '' ? 'elevated' : 'tonal'"
-                                @click="activeTag = ''">全部</v-chip>
-                            <v-chip v-for="tag in allTags" :key="tag" class="mr-1 mb-1" size="small"
-                                :variant="isTagActive(tag) ? 'elevated' : 'tonal'" @click="activeTag = tag">{{ tag
-                                }}</v-chip>
-                        </div>
-                        </div>
-                        <JapanPrefectureMap :visited-prefectures="visitedPrefectures"
-                            :active-prefecture="activeTagNormalized" @select="onSelectPrefecture"></JapanPrefectureMap>
-                    </div>
-                </v-col>
             </v-row>
         </v-container>
     </div>
@@ -332,6 +327,10 @@ onMounted(async () => {
     font-style: normal;
 }
 
+.blog-map-section {
+    margin: 0 12px 10px;
+}
+
 /* 标签栏 */
 .tag-filters-container {
     display: flex;
@@ -341,12 +340,8 @@ onMounted(async () => {
     border-radius: 12px;
     padding: 16px;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    width: fit-content;
-}
-
-.sticky-sidebar {
-    position: sticky;
-    top: 16px;
+    width: calc(100% - 24px);
+    margin: 0 12px 14px;
 }
 
 .tag-label {

@@ -55,7 +55,7 @@ export async function onRequestGet(context) {
             slug: page.properties.Slug?.rich_text?.[0]?.plain_text || page.id,
             title: page.properties.Name?.title?.[0]?.plain_text || '无标题',
             date: page.properties.Date?.date?.start || '',
-            cover: page.cover?.external?.url || page.cover?.file?.url || page.properties.Cover?.url || '',
+            cover: normalizeMediaUrl(page.cover?.external?.url || page.cover?.file?.url || page.properties.Cover?.url || ''),
             summary: page.properties.Summary?.rich_text?.[0]?.plain_text || '',
             tags: page.properties.Tags?.multi_select?.map(t => t.name) || [],
         }))
@@ -89,4 +89,10 @@ function corsHeaders() {
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
     }
+}
+
+function normalizeMediaUrl(url = '') {
+    if (!url) return ''
+    // Vercel 生产环境是 HTTPS，避免外链为 HTTP 导致浏览器 mixed content 拦截
+    return url.startsWith('http://') ? url.replace(/^http:\/\//, 'https://') : url
 }

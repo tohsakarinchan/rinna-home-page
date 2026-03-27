@@ -102,7 +102,8 @@
                 <!-- 右侧标签栏 -->
                 <v-col cols="12" md="3" lg="3" :class="xs || sm ? 'px-2 mt-0 mb-4' : 'pa-0'"
                     class="order-first order-md-last">
-                    <div class="tag-filters-container sticky-sidebar mx-0">
+                    <div class="sticky-sidebar mx-0">
+                        <div class="tag-filters-container">
                         <span class="tag-label">
                             <v-icon size="small" class="mr-1">mdi-tag-multiple</v-icon>
                             游记标签
@@ -111,9 +112,12 @@
                             <v-chip class="mr-1 mb-1" size="small" :variant="activeTag === '' ? 'elevated' : 'tonal'"
                                 @click="activeTag = ''">全部</v-chip>
                             <v-chip v-for="tag in allTags" :key="tag" class="mr-1 mb-1" size="small"
-                                :variant="activeTag === tag ? 'elevated' : 'tonal'" @click="activeTag = tag">{{ tag
+                                :variant="isTagActive(tag) ? 'elevated' : 'tonal'" @click="activeTag = tag">{{ tag
                                 }}</v-chip>
                         </div>
+                        </div>
+                        <JapanPrefectureMap :visited-prefectures="visitedPrefectures"
+                            :active-prefecture="activeTagNormalized" @select="onSelectPrefecture"></JapanPrefectureMap>
                     </div>
                 </v-col>
             </v-row>
@@ -124,6 +128,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
+import JapanPrefectureMap from './JapanPrefectureMap.vue'
+import { normalizePrefectureTag } from '../constants/prefectures'
 
 const { xs, sm } = useDisplay()
 
@@ -186,7 +192,12 @@ const filteredPosts = computed(() => {
 
     // 标签筛选
     if (activeTag.value) {
-        list = list.filter(p => p.tags.includes(activeTag.value))
+        const normalizedActive = activeTagNormalized.value
+        list = list.filter(p =>
+            p.tags.some(tag =>
+                tag === activeTag.value || (normalizedActive && normalizePrefectureTag(tag) === normalizedActive)
+            )
+        )
     }
 
     // 关键词搜索：匹配标题、摘要、标签
@@ -201,6 +212,29 @@ const filteredPosts = computed(() => {
 
     return list
 })
+
+const activeTagNormalized = computed(() => normalizePrefectureTag(activeTag.value))
+
+const visitedPrefectures = computed(() => {
+    const set = new Set()
+    posts.value.forEach(post => {
+        post.tags.forEach(tag => {
+            const normalized = normalizePrefectureTag(tag)
+            if (normalized) set.add(normalized)
+        })
+    })
+    return [...set]
+})
+
+function isTagActive(tag) {
+    if (activeTag.value === tag) return true
+    const normalizedTag = normalizePrefectureTag(tag)
+    return Boolean(normalizedTag && normalizedTag === activeTagNormalized.value)
+}
+
+function onSelectPrefecture(prefecture) {
+    activeTag.value = activeTagNormalized.value === prefecture ? '' : prefecture
+}
 
 async function fetchPosts(cursor = null) {
     const params = new URLSearchParams({ page_size: PAGE_SIZE })

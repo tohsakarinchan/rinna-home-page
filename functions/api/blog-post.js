@@ -54,7 +54,7 @@ export async function onRequestGet(context) {
         const meta = {
             title: page.properties.Name?.title?.[0]?.plain_text || '',
             date: page.properties.Date?.date?.start || '',
-            cover: page.cover?.external?.url || page.cover?.file?.url || '',
+            cover: normalizeMediaUrl(page.cover?.external?.url || page.cover?.file?.url || ''),
             tags: page.properties.Tags?.multi_select?.map(t => t.name) || [],
             location: page.properties.Location?.rich_text?.[0]?.plain_text || '',
         }
@@ -244,7 +244,7 @@ function blockToHtml(block) {
             return '<hr>'
 
         case 'image': {
-            const src = data?.external?.url || data?.file?.url || ''
+            const src = normalizeMediaUrl(data?.external?.url || data?.file?.url || '')
             const caption = richTextToHtml(data?.caption)
             return `<figure><img src="${src}" alt="${caption || ''}" loading="lazy"><figcaption>${caption}</figcaption></figure>`
         }
@@ -262,7 +262,7 @@ function blockToHtml(block) {
         }
 
         case 'video': {
-            const src = data?.external?.url || data?.file?.url || ''
+            const src = normalizeMediaUrl(data?.external?.url || data?.file?.url || '')
             // 如果是 YouTube/Bilibili 链接转成 embed URL 再用 iframe
             const embedSrc = toEmbedUrl(src)
             if (embedSrc) {
@@ -297,4 +297,10 @@ function toEmbedUrl(url = '') {
     if (bv) return `https://player.bilibili.com/player.html?bvid=${bv[1]}&autoplay=0`
 
     return null
+}
+
+function normalizeMediaUrl(url = '') {
+    if (!url) return ''
+    // Vercel 生产环境是 HTTPS，避免外链为 HTTP 导致浏览器 mixed content 拦截
+    return url.startsWith('http://') ? url.replace(/^http:\/\//, 'https://') : url
 }

@@ -13,8 +13,16 @@
                 <!-- 左侧文章列表区域 (手机端排第二，PC端排第一) -->
                 <v-col cols="12" md="9" lg="9" class="pa-0 pr-md-4 order-last order-md-first">
                     <!-- 加载中 -->
-                    <div v-if="loading" class="text-center py-10">
-                        <v-progress-circular indeterminate size="40"></v-progress-circular>
+                    <div v-if="loading">
+                        <v-row class="ma-0">
+                            <v-col v-for="i in PAGE_SIZE" :key="i" cols="6" sm="4" md="4" lg="4"
+                                :style="xs ? { padding: '6px' } : { padding: '8px' }">
+                                <v-skeleton-loader type="image, list-item-two-line" rounded="lg" :style="{
+                                    background: 'rgba(255,255,255,0.05)',
+                                    backdropFilter: 'blur(10px)'
+                                }"></v-skeleton-loader>
+                            </v-col>
+                        </v-row>
                     </div>
 
                     <!-- 文章卡片网格 -->
@@ -55,6 +63,14 @@
                             <v-icon size="48" opacity="0.3">mdi-post-outline</v-icon>
                             <p class="mt-3" style="opacity:0.5">暂无文章</p>
                         </div>
+
+                        <!-- 加载更多按钮 -->
+                        <div v-if="hasMore && !activeTag" class="text-center mt-4 mb-2">
+                            <v-btn variant="tonal" :loading="loadingMore" @click="loadMore">
+                                加载更多
+                                <v-icon end>mdi-chevron-down</v-icon>
+                            </v-btn>
+                        </div>
                     </div>
                 </v-col>
 
@@ -84,11 +100,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 
-const { xs } = useDisplay()
+const { xs, sm } = useDisplay()
 
 const posts = ref([])
 const loading = ref(true)
 const activeTag = ref('')
+const loadingMore = ref(false)
+const hasMore = ref(false)
+const nextCursor = ref(null)
+const PAGE_SIZE = 6
 
 const allTags = computed(() => {
     const set = new Set()
@@ -101,11 +121,38 @@ const filteredPosts = computed(() => {
     return posts.value.filter(p => p.tags.includes(activeTag.value))
 })
 
+// 初始加载
+async function fetchPosts(cursor = null) {
+    const params = new URLSearchParams({ page_size: PAGE_SIZE })
+    if (cursor) params.append('cursor', cursor)
+
+    const res = await fetch(`/api/blog-list?${params}`)
+    const data = await res.json()
+    return data
+}
+
+// 加载更多
+async function loadMore() {
+    if (!hasMore.value || loadingMore.value) return
+    loadingMore.value = true
+    try {
+        const data = await fetchPosts(nextCursor.value)
+        posts.value = [...posts.value, ...data.posts]  // 追加到现有列表
+        hasMore.value = data.has_more
+        nextCursor.value = data.next_cursor
+    } catch (e) {
+        console.error('加载更多失败', e)
+    } finally {
+        loadingMore.value = false
+    }
+}
+
 onMounted(async () => {
     try {
-        const res = await fetch('/api/blog-list')
-        const data = await res.json()
+        const data = await fetchPosts()
         posts.value = data.posts ?? []
+        hasMore.value = data.has_more
+        nextCursor.value = data.next_cursor
     } catch (e) {
         console.error('博客列表加载失败', e)
     } finally {

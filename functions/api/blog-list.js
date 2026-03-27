@@ -7,7 +7,11 @@
  *   NOTION_DATABASE_ID — 博客数据库的 ID（32位，不含连字符）
  */
 export async function onRequestGet(context) {
-    const { env } = context
+    const { env, request } = context
+    const url = new URL(request.url)
+
+    const pageSize = parseInt(url.searchParams.get('page_size')) || 6
+    const startCursor = url.searchParams.get('cursor') || undefined
 
     const headers = {
         'Authorization': `Bearer ${env.NOTION_TOKEN}`,
@@ -22,6 +26,8 @@ export async function onRequestGet(context) {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
+                    page_size: pageSize,
+                    start_cursor: startCursor,
                     filter: {
                         property: 'Status',
                         select: { equals: 'Published' },
@@ -54,7 +60,11 @@ export async function onRequestGet(context) {
             tags: page.properties.Tags?.multi_select?.map(t => t.name) || [],
         }))
 
-        return new Response(JSON.stringify({ posts }), {
+        return new Response(JSON.stringify({
+            posts,
+            hasMore: data.has_more,
+            nextCursor: data.next_cursor
+        }), {
             status: 200,
             headers: corsHeaders(),
         })

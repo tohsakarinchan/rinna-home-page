@@ -9,11 +9,18 @@
         </div>
 
         <svg viewBox="0 0 260 450" class="japan-map-svg" role="img" aria-label="日本都道府县交互地图">
-            <g v-for="pref in PREFECTURES" :key="pref.name" class="pref-group" @click="emit('select', pref.name)">
-                <rect :x="pref.x" :y="pref.y" rx="5" ry="5" width="34" height="18"
-                    :class="rectClass(pref.name)"></rect>
-                <title>{{ pref.name }}</title>
+            <rect x="6" y="8" width="248" height="434" rx="12" class="map-board" />
+
+            <g v-if="geoPrefectures.length">
+                <g v-for="pref in geoPrefectures" :key="pref.name" class="pref-group" @click="emit('select', pref.name)">
+                    <path :d="pref.d" :class="tileClass(pref.name)"></path>
+                    <title>{{ pref.name }}</title>
+                </g>
             </g>
+
+            <text v-else x="130" y="228" text-anchor="middle" class="map-loading-text">
+                {{ geoLoading ? '地图边界加载中…' : '地图数据加载失败，已回退内置数据' }}
+            </text>
         </svg>
 
         <div class="map-legend mt-2">
@@ -34,8 +41,11 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { PREFECTURES } from '../constants/prefectures'
+import { computed, onMounted, ref } from 'vue'
+import { PREFECTURE_SVG_PATHS } from '../constants/prefectureMapSvgData'
+import { normalizePrefectureTag } from '../constants/prefectures'
+
+const PUBLIC_GEOJSON_URL = 'https://cdn.jsdelivr.net/npm/open-data-jp-prefectures-geojson@1.1.0/output/prefectures.geojson'
 
 const props = defineProps({
     visitedPrefectures: {
@@ -55,12 +65,101 @@ const props = defineProps({
 const emit = defineEmits(['select'])
 
 const visitedSet = computed(() => new Set(props.visitedPrefectures))
+const geoPrefectures = ref([])
+const geoLoading = ref(true)
 
-function rectClass(prefectureName) {
-    if (props.activePrefecture === prefectureName) return 'pref-rect pref-active'
-    if (visitedSet.value.has(prefectureName)) return 'pref-rect pref-visited'
-    return 'pref-rect pref-default'
+function tileClass(prefectureName) {
+    if (props.activePrefecture === prefectureName) return 'pref-tile pref-active'
+    if (visitedSet.value.has(prefectureName)) return 'pref-tile pref-visited'
+    return 'pref-tile pref-default'
 }
+
+function flattenCoords(geometry) {
+    if (!geometry) return []
+    if (geometry.type === 'Polygon') return geometry.coordinates
+    if (geometry.type === 'MultiPolygon') return geometry.coordinates.flat()
+    return []
+}
+
+function pathFromRings(rings, projector) {
+    return rings
+        .map((ring) => {
+            const points = ring.map(([lng, lat]) => projector(lng, lat))
+            if (!points.length) return ''
+            const [first, ...rest] = points
+            return `M ${first[0].toFixed(2)} ${first[1].toFixed(2)} ${rest.map((p) => `L ${p[0].toFixed(2)} ${p[1].toFixed(2)}`).join(' ')} Z`
+        })
+        .join(' ')
+}
+
+function getFeatureName(feature) {
+    const props = feature?.properties || {}
+    const candidates = [props.name, props.NAME_1, props.N03_004, props.prefecture]
+    for (const value of candidates) {
+        const normalized = normalizePrefectureTag(value || '')
+        if (normalized) return normalized
+    }
+    return ''
+}
+
+function buildProjectedPaths(features) {
+    const allPoints = []
+    features.forEach((feature) => {
+        flattenCoords(feature.geometry).forEach((ring) => {
+            ring.forEach(([lng, lat]) => allPoints.push([lng, lat]))
+        })
+    })
+
+    const lngValues = allPoints.map((p) => p[0])
+    const latValues = allPoints.map((p) => p[1])
+    const minLng = Math.min(...lngValues)
+    const maxLng = Math.max(...lngValues)
+    const minLat = Math.min(...latValues)
+    const maxLat = Math.max(...latValues)
+
+    const paddingX = 12
+    const paddingY = 16
+    const drawW = 260 - paddingX * 2
+    const drawH = 450 - paddingY * 2
+    const scaleX = drawW / (maxLng - minLng)
+    const scaleY = drawH / (maxLat - minLat)
+    const scale = Math.min(scaleX, scaleY)
+    const offsetX = (260 - (maxLng - minLng) * scale) / 2
+    const offsetY = (450 - (maxLat - minLat) * scale) / 2
+
+    const projector = (lng, lat) => {
+        const x = (lng - minLng) * scale + offsetX
+        const y = (maxLat - lat) * scale + offsetY
+        return [x, y]
+    }
+
+    return features
+        .map((feature) => {
+            const name = getFeatureName(feature)
+            if (!name) return null
+            const rings = flattenCoords(feature.geometry)
+            const d = pathFromRings(rings, projector)
+            if (!d) return null
+            return { name, d }
+        })
+        .filter(Boolean)
+}
+
+onMounted(async () => {
+    try {
+        const response = await fetch(PUBLIC_GEOJSON_URL)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const geojson = await response.json()
+        const features = Array.isArray(geojson?.features) ? geojson.features : []
+        const projectedPaths = buildProjectedPaths(features)
+        geoPrefectures.value = projectedPaths.length ? projectedPaths : PREFECTURE_SVG_PATHS
+    } catch (error) {
+        console.warn('Failed to load public GeoJSON, fallback to embedded svg paths.', error)
+        geoPrefectures.value = PREFECTURE_SVG_PATHS
+    } finally {
+        geoLoading.value = false
+    }
+})
 </script>
 
 <style scoped>
@@ -84,32 +183,43 @@ function rectClass(prefectureName) {
     display: block;
 }
 
+.map-board {
+    fill: rgba(248, 250, 252, 0.9);
+    stroke: rgba(30, 41, 59, 0.35);
+    stroke-width: 1;
+}
+
+.map-loading-text {
+    font-size: 10px;
+    fill: rgba(71, 85, 105, 0.8);
+}
+
 .pref-group {
     cursor: pointer;
 }
 
-.pref-rect {
+.pref-tile {
     transition: all 0.18s ease;
-    stroke-width: 1.1;
+    stroke-width: 0.8;
 }
 
 .pref-default {
-    fill: rgba(255, 255, 255, 0.13);
-    stroke: rgba(255, 255, 255, 0.3);
+    fill: rgba(209, 213, 219, 0.92);
+    stroke: rgba(100, 116, 139, 0.9);
 }
 
 .pref-visited {
-    fill: rgba(75, 218, 190, 0.68);
-    stroke: rgba(75, 218, 190, 0.95);
+    fill: rgba(250, 204, 21, 0.96);
+    stroke: rgba(161, 98, 7, 0.9);
 }
 
 .pref-active {
-    fill: rgba(255, 228, 109, 0.9);
-    stroke: rgba(255, 228, 109, 1);
+    fill: rgba(14, 165, 233, 0.95);
+    stroke: rgba(2, 132, 199, 0.95);
 }
 
-.pref-group:hover .pref-rect {
-    filter: brightness(1.12);
+.pref-group:hover .pref-tile {
+    filter: brightness(1.06);
 }
 
 .map-legend {
@@ -130,15 +240,15 @@ function rectClass(prefectureName) {
 }
 
 .dot.default {
-    background: rgba(255, 255, 255, 0.24);
+    background: rgba(107, 114, 128, 0.85);
 }
 
 .dot.visited {
-    background: rgba(75, 218, 190, 0.85);
+    background: rgba(250, 204, 21, 0.95);
 }
 
 .dot.active {
-    background: rgba(255, 228, 109, 0.9);
+    background: rgba(56, 189, 248, 0.95);
 }
 
 .visit-list {
@@ -167,8 +277,8 @@ function rectClass(prefectureName) {
 }
 
 .visit-row-active {
-    border-color: rgba(255, 228, 109, 0.9);
-    background: rgba(255, 228, 109, 0.2);
+    border-color: rgba(56, 189, 248, 0.9);
+    background: rgba(56, 189, 248, 0.2);
 }
 
 .visit-name {

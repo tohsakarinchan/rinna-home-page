@@ -5,16 +5,13 @@
                 <v-icon size="small" class="mr-1">mdi-map</v-icon>
                 日本都道府县足迹
             </span>
-            <v-chip size="x-small" variant="tonal">已点亮 {{ visitedSet.size }}/47</v-chip>
+            <v-chip size="x-small" variant="tonal">达成 {{ visitedSet.size }}/47</v-chip>
         </div>
 
         <svg viewBox="0 0 260 450" class="japan-map-svg" role="img" aria-label="日本都道府县交互地图">
             <g v-for="pref in PREFECTURES" :key="pref.name" class="pref-group" @click="emit('select', pref.name)">
                 <rect :x="pref.x" :y="pref.y" rx="5" ry="5" width="34" height="18"
                     :class="rectClass(pref.name)"></rect>
-                <text :x="pref.x + 17" :y="pref.y + 12" text-anchor="middle" class="pref-label">
-                    {{ pref.short }}
-                </text>
                 <title>{{ pref.name }}</title>
             </g>
         </svg>
@@ -23,6 +20,15 @@
             <span><i class="dot active"></i> 当前筛选</span>
             <span><i class="dot visited"></i> 已去过</span>
             <span><i class="dot default"></i> 未记录</span>
+        </div>
+
+        <div class="visit-list mt-3">
+            <button v-for="item in visitRecords" :key="item.name" type="button" class="visit-row"
+                :class="{ 'visit-row-active': item.name === activePrefecture }" @click="emit('select', item.name)">
+                <span class="visit-name">{{ item.name }}</span>
+                <span class="visit-date">{{ item.firstVisitLabel }}</span>
+            </button>
+            <p v-if="!visitRecords.length" class="visit-empty">还没有识别到都道府县标签</p>
         </div>
     </div>
 </template>
@@ -40,6 +46,10 @@ const props = defineProps({
         type: String,
         default: '',
     },
+    visitRecords: {
+        type: Array,
+        default: () => [],
+    }
 })
 
 const emit = defineEmits(['select'])
@@ -102,14 +112,6 @@ function rectClass(prefectureName) {
     filter: brightness(1.12);
 }
 
-.pref-label {
-    font-size: 5.6px;
-    dominant-baseline: middle;
-    fill: rgba(0, 0, 0, 0.72);
-    pointer-events: none;
-    user-select: none;
-}
-
 .map-legend {
     display: flex;
     gap: 10px;
@@ -137,5 +139,51 @@ function rectClass(prefectureName) {
 
 .dot.active {
     background: rgba(255, 228, 109, 0.9);
+}
+
+.visit-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.visit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    border-radius: 8px;
+    padding: 7px 10px;
+    font-size: 0.76rem;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+
+.visit-row:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.visit-row-active {
+    border-color: rgba(255, 228, 109, 0.9);
+    background: rgba(255, 228, 109, 0.2);
+}
+
+.visit-name {
+    font-weight: 600;
+}
+
+.visit-date {
+    opacity: 0.8;
+}
+
+.visit-empty {
+    opacity: 0.6;
+    font-size: 0.74rem;
+    margin: 0;
+    text-align: center;
+    padding: 8px 0;
 }
 </style>

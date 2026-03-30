@@ -117,7 +117,8 @@
                         </div>
                         </div>
                         <JapanPrefectureMap :visited-prefectures="visitedPrefectures"
-                            :active-prefecture="activeTagNormalized" @select="onSelectPrefecture"></JapanPrefectureMap>
+                            :active-prefecture="activeTagNormalized" :visit-records="prefectureVisitRecords"
+                            @select="onSelectPrefecture"></JapanPrefectureMap>
                     </div>
                 </v-col>
             </v-row>
@@ -215,15 +216,33 @@ const filteredPosts = computed(() => {
 
 const activeTagNormalized = computed(() => normalizePrefectureTag(activeTag.value))
 
-const visitedPrefectures = computed(() => {
-    const set = new Set()
+const prefectureVisitRecords = computed(() => {
+    const firstVisitMap = new Map()
+
     posts.value.forEach(post => {
         post.tags.forEach(tag => {
-            const normalized = normalizePrefectureTag(tag)
-            if (normalized) set.add(normalized)
+            const prefecture = normalizePrefectureTag(tag)
+            if (!prefecture) return
+
+            const dateStr = post.date || ''
+            const oldValue = firstVisitMap.get(prefecture)
+            if (!oldValue || compareDateString(dateStr, oldValue) < 0) {
+                firstVisitMap.set(prefecture, dateStr)
+            }
         })
     })
-    return [...set]
+
+    return [...firstVisitMap.entries()]
+        .map(([name, firstVisitRaw]) => ({
+            name,
+            firstVisitRaw,
+            firstVisitLabel: formatVisitDate(firstVisitRaw),
+        }))
+        .sort((a, b) => compareDateString(a.firstVisitRaw, b.firstVisitRaw))
+})
+
+const visitedPrefectures = computed(() => {
+    return prefectureVisitRecords.value.map(item => item.name)
 })
 
 function isTagActive(tag) {
@@ -234,6 +253,42 @@ function isTagActive(tag) {
 
 function onSelectPrefecture(prefecture) {
     activeTag.value = activeTagNormalized.value === prefecture ? '' : prefecture
+}
+
+function compareDateString(a = '', b = '') {
+    const av = safeDateValue(a)
+    const bv = safeDateValue(b)
+    return av - bv
+}
+
+function safeDateValue(dateStr = '') {
+    if (!dateStr) return Number.POSITIVE_INFINITY
+    const v = new Date(dateStr).getTime()
+    return Number.isNaN(v) ? Number.POSITIVE_INFINITY : v
+}
+
+function formatVisitDate(dateStr = '') {
+    if (!dateStr) return '未知时间'
+    const date = new Date(dateStr)
+    if (Number.isNaN(date.getTime())) return dateStr
+
+    // Notion 纯日期一般没有时间，保持简洁格式
+    if (!String(dateStr).includes('T')) {
+        return date.toLocaleDateString('zh-CN', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+        })
+    }
+
+    return date.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+    })
 }
 
 async function fetchPosts(cursor = null) {

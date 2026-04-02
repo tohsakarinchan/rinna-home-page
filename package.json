@@ -15,6 +15,7 @@
     "@mdi/font": "^7.4.47",
     "@notionhq/client": "^5.14.0",
     "chart.js": "^4.4.7",
+    "echarts": "^6.0.0",
     "less": "^4.2.0",
     "marked": "^17.0.5",
     "notion-to-md": "^3.1.9",

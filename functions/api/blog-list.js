@@ -62,8 +62,8 @@ export async function onRequestGet(context) {
 
         return new Response(JSON.stringify({
             posts,
-            hasMore: data.has_more,
-            nextCursor: data.next_cursor
+            has_more: data.has_more,
+            next_cursor: data.next_cursor
         }), {
             status: 200,
             headers: corsHeaders(),

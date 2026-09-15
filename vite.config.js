@@ -5,13 +5,13 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
-    // 本地开发时将 /api/* 转发到 wrangler pages dev (端口 8788)
+    // 本地开发时将 /api/* 转发到本地 API (端口 8788)
     // 启动方式：
-    //   终端1: wrangler pages dev ./dist --port 8788
+    //   终端1: npm run dev:api
     //   终端2: npm run dev
     proxy: {
       '/api': {
-        target: 'http://localhost:8788',
+        target: 'http://127.0.0.1:8788',
         changeOrigin: true,
       },
     },

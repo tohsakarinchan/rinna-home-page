@@ -310,11 +310,11 @@ onUnmounted(() => {
 
 .echarts-container {
     width: 100%;
-    height: clamp(400px, 62vh, 520px);
+    height: clamp(240px, 45dvh, 520px);
 }
 
 .map-loading {
-    height: clamp(400px, 62vh, 520px);
+    height: clamp(240px, 45dvh, 520px);
     display: flex;
     align-items: center;
     justify-content: center;

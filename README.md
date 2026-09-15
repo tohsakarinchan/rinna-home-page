@@ -69,6 +69,13 @@ npm install
 npm run dev
 ```
 
+旅游日记本地调试还需在另一个终端运行 `npm run dev:api`（Node.js 22+）。
+该服务仅监听 `127.0.0.1:8788`，读取 `.env.local` 和 `.dev.vars`，后者优先。
+文章需要 `NOTION_TOKEN` 和 `NOTION_DATABASE_ID`；额外到访记录需要
+`NOTION_PLACES_DATABASE_ID` 和 `NOTION_VISITS_DATABASE_ID`，并将数据库共享给对应 Notion integration。
+未配置额外数据库时仍显示文章生成的足迹。Vercel 与 Cloudflare 部署都需要在各自平台设置这些变量。
+运行 `npm test` 检查分页、错误响应与两平台的到访记录结果。
+
 ### Vercel在线部署
 
 > 无需服务器，点击链接一键在线部署到 [Vercel](https://vercel.com/new/clone?s=https://github.com/leleo886/leleo-home-page.git)（首先需要有github和vercel账号）

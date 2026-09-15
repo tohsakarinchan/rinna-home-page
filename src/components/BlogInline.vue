@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div>
         <!-- ── 顶部标题栏：[✈️ 旅游日记] [搜索框] [地图按钮] ── -->
         <div class="blog-inline-header">
@@ -57,6 +57,11 @@
                         </v-row>
                     </div>
 
+                    <div v-else-if="loadError" class="text-center py-10" role="alert">
+                        <p>{{ loadError }}</p>
+                        <v-btn class="mt-3" variant="tonal" @click="loadInitialPosts">重新加载</v-btn>
+                    </div>
+
                     <div v-else>
                         <v-row v-if="filteredPosts.length" class="ma-0">
                             <v-col v-for="post in filteredPosts" :key="post.id" cols="6" sm="4" md="4" lg="4"
@@ -95,6 +100,7 @@
                             </p>
                         </div>
 
+                        <p v-if="loadMoreError" role="alert" class="text-center mt-3">{{ loadMoreError }}</p>
                         <div v-if="hasMore && !activeTag && !searchQuery.trim()" class="text-center mt-4 mb-2">
                             <v-btn variant="tonal" :loading="loadingMore" @click="loadMore">
                                 加载更多
@@ -165,18 +171,39 @@
                         </transition>
 
                         <div class="map-dialog-body">
+                            <div v-if="mapSyncError" role="alert" class="data-notice">
+                                足迹文章未能完整加载。
+                                <v-btn size="small" variant="text" :loading="mapSyncLoading" @click="retryMapSync">重试</v-btn>
+                            </div>
                             <JapanPrefectureMap ref="prefectureMapRef" :visited-prefectures="visitedPrefectures"
                                 :active-prefecture="activeTagNormalized" :visit-records="visitRecords"
                                 @select="onSelectPrefectureFromMap" />
+                            <div class="travel-list-panel">
+                                <div class="travel-list-head">
+                                    <span>去过</span>
+                                    <span>首次到访</span>
+                                </div>
+                                <div v-if="visitLoading" class="data-notice" role="status">正在加载到访记录…</div>
+                                <div v-else-if="visitError" class="data-notice" role="alert">
+                                    {{ visitError }}
+                                    <v-btn size="small" variant="text" @click="loadVisitData">重试</v-btn>
+                                </div>
+                                <div v-else-if="visitWarning" class="data-notice" role="status">{{ visitWarning }}</div>
+                                <div v-if="visitRecords.length" class="travel-list-body">
+                                    <div v-for="item in visitRecords" :key="item.name" class="travel-list-row">
+                                        <span class="travel-place">{{ item.name }}</span>
+                                        <span class="travel-date">{{ item.firstVisitLabel }}</span>
+                                    </div>
+                                </div>
+                                <div v-else-if="!visitLoading && !visitError" class="travel-list-empty">暂无记录</div>
+                            </div>
                         </div>
 
                         <div class="map-dialog-footer">
                             <span style="font-size:0.7rem;opacity:0.5;">点击都道府县进行筛选，再次点击取消</span>
-                        </div>
-
                         <div class="map-zoom-control">
                             <div class="map-zoom-bar">
-                                <v-btn icon size="32" variant="text" @click="zoomOutMap">
+                                <v-btn icon size="32" variant="text" aria-label="缩小地图" @click="zoomOutMap">
                                     <v-icon size="16">mdi-minus</v-icon>
                                 </v-btn>
                                 <v-btn variant="text" size="small" class="px-2" style="min-width:0;"
@@ -184,10 +211,11 @@
                                     {{ prefectureMapRef?.map_zoom ? (Math.round(prefectureMapRef.map_zoom * 10) /
                                         10).toFixed(1) + 'x' : '比例' }}
                                 </v-btn>
-                                <v-btn icon size="32" variant="text" @click="zoomInMap">
+                                <v-btn icon size="32" variant="text" aria-label="放大地图" @click="zoomInMap">
                                     <v-icon size="16">mdi-plus</v-icon>
                                 </v-btn>
                             </div>
+                        </div>
                         </div>
                     </v-card>
                 </transition>
@@ -201,12 +229,22 @@ import { ref, computed, onMounted } from 'vue'
 import { useDisplay } from 'vuetify'
 import JapanPrefectureMap from './JapanPrefectureMap.vue'
 import { normalizePrefectureTag } from '../constants/prefectures'
+import { fetchJson, fetchPostPage } from '../utils/api.js'
 
 const { xs, sm } = useDisplay()
 
 const posts = ref([])
 const mapPosts = ref([])
+const notionVisitedPlaces = ref([])
+const notionVisitRecords = ref([])
 const loading = ref(true)
+const loadError = ref('')
+const loadMoreError = ref('')
+const visitLoading = ref(false)
+const visitError = ref('')
+const visitWarning = ref('')
+const mapSyncError = ref(false)
+const mapSyncLoading = ref(false)
 const activeTag = ref('')
 const loadingMore = ref(false)
 const hasMore = ref(false)
@@ -270,6 +308,7 @@ function parseVisitTimestamp(input = '') {
 }
 
 function formatVisitDate(input = '') {
+    if (/^\d{4}-\d{2}$/.test(input)) return input.replace('-', '/')
     const ts = parseVisitTimestamp(input)
     if (!Number.isFinite(ts)) return input || '--'
     const pad = n => String(n).padStart(2, '0')
@@ -317,10 +356,14 @@ const visitedPrefectures = computed(() => {
     mapPosts.value.forEach(post => {
         post.tags.forEach(tag => { const n = normalizePrefectureTag(tag); if (n) set.add(n) })
     })
+    notionVisitedPlaces.value.forEach(placeName => {
+        const n = normalizePrefectureTag(placeName)
+        if (n) set.add(n)
+    })
     return [...set]
 })
 
-const visitRecords = computed(() => {
+const firstVisitEntries = computed(() => {
     const firstVisit = new Map()
     mapPosts.value.forEach(post => {
         const ts = parseVisitTimestamp(post.date)
@@ -332,9 +375,22 @@ const visitRecords = computed(() => {
             if (!prev || ts < prev.ts) firstVisit.set(n, { name: n, ts, rawDate: post.date })
         })
     })
+    notionVisitRecords.value.forEach(record => {
+        const n = normalizePrefectureTag(record?.name || '')
+        if (!n) return
+        const rawDate = record?.firstVisitDate || ''
+        const ts = parseVisitTimestamp(rawDate)
+        if (!Number.isFinite(ts)) return
+        // Explicit travel records take precedence over article publication dates.
+        firstVisit.set(n, { name: n, ts, rawDate })
+    })
     return [...firstVisit.values()]
-        .sort((a, b) => b.ts - a.ts)
-        .map(item => ({ name: item.name, firstVisitLabel: formatVisitDate(item.rawDate) }))
+})
+
+const visitRecords = computed(() => {
+    return firstVisitEntries.value
+        .sort((a, b) => a.ts - b.ts)
+        .map(item => ({ name: item.name, ts: item.ts, firstVisitLabel: formatVisitDate(item.rawDate) }))
 })
 
 function isTagActive(tag) {
@@ -346,7 +402,26 @@ function isTagActive(tag) {
 async function fetchPosts(cursor = null, pageSize = PAGE_SIZE) {
     const params = new URLSearchParams({ page_size: pageSize })
     if (cursor) params.append('cursor', cursor)
-    return (await fetch(`/api/blog-list?${params}`)).json()
+    return fetchPostPage(`/api/blog-list?${params}`)
+}
+
+async function loadVisitData() {
+    visitLoading.value = true
+    visitError.value = ''
+    visitWarning.value = ''
+    try {
+        const data = await fetchJson('/api/visit-data')
+        if (!Array.isArray(data.visited_places) || !Array.isArray(data.visit_records)) {
+            throw new Error('Invalid visit data')
+        }
+        notionVisitedPlaces.value = data.visited_places
+        notionVisitRecords.value = data.visit_records
+        if (data.warning) visitWarning.value = '额外到访记录尚未启用，目前显示游记中的足迹。'
+    } catch (e) {
+        visitError.value = '到访记录加载失败，目前仅显示已加载的足迹。'
+    } finally {
+        visitLoading.value = false
+    }
 }
 
 async function syncAllMapPosts(initialPage) {
@@ -359,9 +434,25 @@ async function syncAllMapPosts(initialPage) {
     }
 }
 
+async function retryMapSync(initialPage) {
+    if (mapSyncLoading.value) return
+    mapSyncLoading.value = true
+    mapSyncError.value = false
+    try {
+        // A click passes a MouseEvent; only accept an actual API page.
+        const page = Array.isArray(initialPage?.posts) ? initialPage : await fetchPosts(null, 100)
+        await syncAllMapPosts(page)
+    } catch (e) {
+        mapSyncError.value = true
+    } finally {
+        mapSyncLoading.value = false
+    }
+}
+
 async function loadMore() {
     if (!hasMore.value || loadingMore.value) return
     loadingMore.value = true
+    loadMoreError.value = ''
     try {
         const data = await fetchPosts(nextCursor.value)
         posts.value = [...posts.value, ...data.posts]
@@ -369,25 +460,33 @@ async function loadMore() {
         hasMore.value = data.has_more
         nextCursor.value = data.next_cursor
     } catch (e) {
-        console.error('加载更多失败', e)
+        loadMoreError.value = '加载更多失败，请点击下方按钮重试。'
     } finally {
         loadingMore.value = false
     }
 }
 
-onMounted(async () => {
+async function loadInitialPosts() {
+    loading.value = true
+    loadError.value = ''
+    loadMoreError.value = ''
     try {
         const data = await fetchPosts()
         posts.value = data.posts ?? []
         mapPosts.value = data.posts ?? []
         hasMore.value = data.has_more
         nextCursor.value = data.next_cursor
-        syncAllMapPosts(data).catch(e => console.warn('Map sync failed:', e))
+        void retryMapSync(data)
     } catch (e) {
-        console.error('博客列表加载失败', e)
+        loadError.value = '文章加载失败，请稍后重试。'
     } finally {
         loading.value = false
     }
+}
+
+onMounted(() => {
+    void loadInitialPosts()
+    void loadVisitData()
 })
 </script>
 
@@ -553,6 +652,10 @@ onMounted(async () => {
 
 /* ── 地图弹窗 ──────────────────────────────────────────── */
 .map-dialog-card {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - 48px);
+    color: var(--leleo-vcard-color, #ffffff);
     background: rgba(30, 30, 40, 0.82) !important;
     backdrop-filter: blur(20px) !important;
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -561,6 +664,7 @@ onMounted(async () => {
 }
 
 .map-dialog-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -577,19 +681,152 @@ onMounted(async () => {
 }
 
 .map-dialog-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     padding: 8px 12px 0;
 }
 
+.travel-list-panel {
+    margin: 12px 4px 2px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.travel-list-head,
+.travel-list-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 138px;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+}
+
+.travel-list-head {
+    font-size: 0.76rem;
+    opacity: 0.92;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.travel-list-body {
+    max-height: 210px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.26) transparent;
+}
+
+.travel-list-body::-webkit-scrollbar {
+    width: 7px;
+}
+
+.travel-list-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+}
+
+.travel-list-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.travel-list-row {
+    font-size: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    transition: background-color 0.16s ease;
+}
+
+.travel-list-row:nth-child(even) {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.travel-list-row:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.travel-list-row:last-child {
+    border-bottom: none;
+}
+
+.travel-place {
+    font-weight: 600;
+    opacity: 0.96;
+}
+
+.travel-date {
+    opacity: 0.88;
+    font-variant-numeric: tabular-nums;
+}
+
+.travel-list-empty {
+    padding: 16px 12px;
+    text-align: center;
+    font-size: 0.78rem;
+    opacity: 0.68;
+}
+
+.travel-place,
+.travel-date {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.travel-list-head span:last-child,
+.travel-date {
+    text-align: right;
+}
+
+.travel-list-head span:first-child,
+.travel-place {
+    text-align: left;
+}
+
+.travel-list-head span {
+    color: var(--leleo-vcard-color, #ffffff);
+}
+
+@media (max-width: 600px) {
+    .travel-list-head,
+    .travel-list-row {
+        grid-template-columns: minmax(0, 1fr) 118px;
+        gap: 8px;
+        padding: 9px 10px;
+    }
+
+    .travel-list-head {
+        font-size: 0.74rem;
+    }
+
+    .travel-list-row {
+        font-size: 0.76rem;
+    }
+}
+
 .map-dialog-footer {
-    padding: 6px 64px 12px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    padding: 8px 12px;
     text-align: center;
 }
 
 .map-zoom-control {
-    position: absolute;
-    right: 12px;
-    bottom: 12px;
-    z-index: 12;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.data-notice {
+    padding: 10px 12px;
+    font-size: 0.8rem;
 }
 
 .map-zoom-bar {

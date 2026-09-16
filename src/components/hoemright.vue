@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="home-content">
 		<div>
 			<div :style="xs || sm ? { 'display': 'none' } : { 'font-size': '4rem' }" class="leleo-left-welcome">{{
 				configdata.welcometitle }}</div>
@@ -8,8 +8,8 @@
 			<v-row align="center">
 				<v-col cols="12" md="8">
 					<!-- PC 端搜索栏 -->
-					<v-text-field class="v-card" :style="xs || sm ? { 'display': 'none' } : {}" v-model="searchQuery"
-						placeholder="搜索..." variant="outlined" rounded hide-details="true" @keyup.enter="performSearch">
+					<v-text-field class="v-card web-search" :style="xs || sm ? { 'display': 'none' } : {}" v-model="searchQuery"
+						placeholder="搜索网络或输入网址" aria-label="搜索网络或输入网址" variant="outlined" rounded hide-details="true" @keyup.enter="performSearch">
 						<template v-slot:prepend-inner>
 							<v-menu>
 								<template v-slot:activator="{ props }">
@@ -81,7 +81,7 @@
 				</v-col>
 
 				<v-col cols="12" md="4" align="center">
-					<v-card class="ma-3" hover>
+					<v-card class="ma-3 clock-card" hover>
 						<template v-slot:title>
 							<span class="leleo-card-title clock-font">{{ formattedTime }}</span>
 						</template>

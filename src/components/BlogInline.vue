@@ -1,5 +1,5 @@
 ﻿<template>
-    <div>
+    <div class="travel-section">
         <!-- ── 顶部标题栏：[✈️ 旅游日记] [搜索框] [地图按钮] ── -->
         <div class="blog-inline-header">
             <div class="blog-section-title" style="color: var(--leleo-vcard-color);">
@@ -9,7 +9,7 @@
 
             <!-- 搜索框，紧贴标题 -->
             <div class="blog-search-input-wrap">
-                <v-text-field v-model="searchQuery" placeholder="搜索..." variant="outlined" rounded hide-details
+                <v-text-field v-model="searchQuery" placeholder="搜索游记或地点" aria-label="搜索游记或地点" variant="outlined" rounded hide-details
                     density="compact" clearable class="blog-search-field" @click:clear="onClear">
                     <template v-slot:prepend-inner>
                         <v-icon size="16" style="opacity: 0.6;">mdi-magnify</v-icon>
@@ -21,7 +21,7 @@
             <div class="map-btn-wrap">
                 <v-btn :variant="activeTagNormalized ? 'tonal' : 'outlined'"
                     :color="activeTagNormalized ? 'var(--leleo-vcard-color)' : undefined" icon size="36"
-                    class="map-trigger-btn" :class="{ 'map-btn-active': activeTagNormalized }" @click="openMapDialog">
+                    class="map-trigger-btn" aria-label="打开日本足迹地图" :class="{ 'map-btn-active': activeTagNormalized }" @click="openMapDialog">
                     <v-icon size="18">mdi-map-search</v-icon>
                 </v-btn>
                 <transition name="badge-pop">
@@ -45,7 +45,7 @@
             <v-row class="ma-0">
 
                 <!-- 左侧文章列表 -->
-                <v-col cols="12" md="9" lg="9" class="pa-0 pr-md-4 order-last order-md-first">
+                <v-col cols="12" md="8" lg="8" class="pa-0 pr-md-4 order-last order-md-first">
                     <div v-if="loading">
                         <v-row class="ma-0">
                             <v-col v-for="i in PAGE_SIZE" :key="i" cols="6" sm="4" md="4" lg="4"
@@ -64,7 +64,7 @@
 
                     <div v-else>
                         <v-row v-if="filteredPosts.length" class="ma-0">
-                            <v-col v-for="post in filteredPosts" :key="post.id" cols="6" sm="4" md="4" lg="4"
+                            <v-col v-for="post in filteredPosts" :key="post.id" cols="12" sm="6" :md="filteredPosts.length === 1 ? 12 : 6" :lg="filteredPosts.length === 1 ? 12 : 6"
                                 :style="xs ? { padding: '6px' } : { padding: '8px' }">
                                 <v-card class="blog-inline-card" :to="`/blog/${post.slug}`" hover rounded="lg">
                                     <v-img :src="post.cover" aspect-ratio="1.7778" cover>
@@ -111,9 +111,18 @@
                 </v-col>
 
                 <!-- 右侧标签栏（恢复，地图已移入弹窗） -->
-                <v-col cols="12" md="3" lg="3" :class="xs || sm ? 'px-2 mt-0 mb-4' : 'pa-0'"
+                <v-col cols="12" md="4" lg="4" :class="xs || sm ? 'px-2 mt-0 mb-4' : 'pa-0'"
                     class="order-first order-md-last">
                     <div class="sticky-sidebar mx-0">
+                        <button class="footprint-preview" type="button" aria-label="打开日本足迹地图" aria-haspopup="dialog" :aria-expanded="mapDialog" @click="openMapDialog">
+                            <span class="footprint-eyebrow">JAPAN · TRAVEL JOURNAL</span>
+                            <span class="footprint-heading">我的日本足迹 <v-icon size="20">mdi-arrow-top-right</v-icon></span>
+                            <span class="footprint-map" aria-hidden="true">
+                                <JapanPrefectureMap compact :visited-prefectures="visitedPrefectures" :active-prefecture="activeTagNormalized" />
+                            </span>
+                            <span class="footprint-caption">{{ visitLoading ? '正在同步足迹…' : `已点亮 ${visitedPrefectures.length} / 47 个都道府县` }}</span>
+                            <span class="footprint-link">{{ visitError ? '部分记录未加载 · 打开重试' : '展开地图与到访记录' }}</span>
+                        </button>
                         <div class="tag-filters-container">
                             <span class="tag-label">
                                 <v-icon size="small" class="mr-1">mdi-tag-multiple</v-icon>
@@ -155,7 +164,7 @@
                                     <v-icon size="14" class="mr-1">mdi-close-circle</v-icon>
                                     清除
                                 </v-btn>
-                                <v-btn icon size="28" variant="text" @click="mapDialog = false">
+                                <v-btn icon size="28" variant="text" aria-label="关闭地图" @click="mapDialog = false">
                                     <v-icon size="16">mdi-close</v-icon>
                                 </v-btn>
                             </div>

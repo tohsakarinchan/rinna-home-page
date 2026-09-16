@@ -17,7 +17,7 @@
         class="floating-switch" @mouseover="expandSwitch" @mouseleave="collapseSwitch"></v-switch>
     </div>
 
-    <div v-show="!isloading && !isClearScreen"
+    <div class="home-shell" v-show="!isloading && !isClearScreen"
       :style="xs || sm ? { 'overflow-y': 'auto', 'overflow-x': 'hidden' } : {}">
       <v-row>
         <v-col cols="12" md="4" lg="3" class="leleo-left" align="center">
@@ -75,7 +75,7 @@
           </v-container>
         </v-col>
 
-        <v-col cols="12" md="8" lg="9" style="height: 100vh;" :style="xs || sm ? {} : { 'overflow': 'auto' }">
+        <v-col cols="12" md="8" lg="9" class="home-main">
           <homeright :configdata=configdata :formattedTime=formattedTime :formattedDate=formattedDate
             :projectcards=projectcards></homeright>
         </v-col>
@@ -207,4 +207,8 @@
   transform: translateY(-2px);
   opacity: 0.9;
 }
+</style>
+
+<style>
+@import './styles/liquid-glass.css';
 </style>

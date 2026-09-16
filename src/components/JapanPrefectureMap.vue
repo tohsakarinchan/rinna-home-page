@@ -1,6 +1,6 @@
 <template>
-    <div class="japan-map-card">
-        <div class="d-flex align-center justify-space-between mb-2">
+    <div class="japan-map-card" :class="{ 'compact-map': compact }">
+        <div v-if="!compact" class="d-flex align-center justify-space-between mb-2">
             <span class="map-title">
                 <v-icon size="small" class="mr-1">mdi-map</v-icon>
                 日本都道府县足迹
@@ -16,7 +16,7 @@
         <!-- ECharts 容器 -->
         <div v-show="!geoLoading" ref="chartEl" class="echarts-container"></div>
 
-        <div class="map-legend mt-2">
+        <div v-if="!compact" class="map-legend mt-2">
             <span><i class="dot active"></i> 当前筛选</span>
             <span><i class="dot visited"></i> 已去过</span>
             <span><i class="dot default"></i> 未记录</span>
@@ -32,6 +32,7 @@ import { normalizePrefectureTag } from '../constants/prefectures'
 
 // ── Props / Emits ────────────────────────────────────────────
 const props = defineProps({
+    compact: { type: Boolean, default: false },
     visitedPrefectures: { type: Array, default: () => [] },
     activePrefecture: { type: String, default: '' },
 })
@@ -145,6 +146,7 @@ function buildOption() {
 
     return {
         tooltip: {
+            show: !props.compact,
             trigger: 'item',
             formatter: ({ name }) => name,
             backgroundColor: 'rgba(0,0,0,0.6)',
@@ -167,10 +169,11 @@ function buildOption() {
             id: 'japan-prefecture-series',
             type: 'map',
             map: 'japan-prefecture',
-            roam: true,
+            silent: props.compact,
+            roam: !props.compact,
             aspectScale: 0.9,
-            center: DEFAULT_MAP_CENTER,
-            zoom: DEFAULT_MAP_ZOOM,
+            center: props.compact ? [137.5, 37.5] : DEFAULT_MAP_CENTER,
+            zoom: props.compact ? 1.5 : DEFAULT_MAP_ZOOM,
             data: seriesData,
             nameProperty: 'name',           // 对应 GeoJSON properties.name
             itemStyle: {
@@ -307,6 +310,17 @@ onUnmounted(() => {
     font-size: 0.8rem;
     opacity: 0.8;
 }
+
+.compact-map {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+}
+.compact-map .echarts-container,
+.compact-map .map-loading { height: 210px; }
 
 .echarts-container {
     width: 100%;

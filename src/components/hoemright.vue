@@ -92,18 +92,18 @@
 				</v-col>
 			</v-row>
 
-			<blog-inline />
+			<travel-passport />
 		</div>
 	</div>
 </template>
 
 <script>
-import BlogInline from '../components/BlogInline.vue';
+import TravelPassport from '../components/TravelPassport.vue';
 import { useDisplay } from 'vuetify'
 
 export default {
 	components: {
-		BlogInline
+		TravelPassport
 	},
 	props: ['configdata', 'formattedTime', 'formattedDate', 'projectcards'],
 	data() {

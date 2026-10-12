@@ -3,3 +3,4 @@ dist/
 .env*
 .dev.vars
 .sites-runtime/
+photo-review/

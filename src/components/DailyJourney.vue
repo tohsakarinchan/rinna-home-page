@@ -1,5 +1,5 @@
 <template>
-  <section class="daily-journey" aria-label="每日旅行页">
+  <section ref="journeyEl" class="daily-journey" aria-label="每日旅行页">
     <nav class="day-pager" aria-label="按日期翻页">
       <button :disabled="page === 0" aria-label="前一天" @click="turn(-1)">←</button>
       <div aria-live="polite"><span>DAY {{ String(day.day).padStart(2, '0') }} · {{ weekday }}</span><strong>{{ day.date.replaceAll('-', '.') }}</strong></div>
@@ -8,7 +8,15 @@
     <header class="day-title"><span>TOKYO / A DAY IN THE STORY</span><h2>{{ day.title }}</h2><p>{{ day.subtitle }}</p></header>
     <div class="map-toolbar"><div><button :aria-pressed="!active && !wholeDay" @click="fit(false)">东京活动范围</button><button :aria-pressed="!active && wholeDay" @click="fit(true)">含机场全日范围</button></div><span aria-live="polite">{{ selectedStop ? `正在查看：${selectedStop.name}` : '点击站点，放大到街区' }}</span></div>
     <p class="map-help">Ctrl + 滚轮缩放 · 点击地图后按 + / − 缩放、方向键移动 · 手机可双指缩放</p>
+    <div ref="mapSlot" class="map-slot" :style="docked ? { height: slotHeight + 'px' } : {}">
+      <Teleport :to="mapHost || 'body'" :disabled="!docked || !mapHost">
+        <div class="reading-map" :class="{ docked }">
+          <div v-if="docked" class="reading-map-heading"><span>沿着文字，重访这一天</span><strong>{{ readingLabel }}</strong><button v-if="!following" @click="resumeFollowing">继续跟随游记 ↗</button><small v-else>地图随正文推进 · 可拖动自由查看</small></div>
     <div ref="mapEl" class="street-map" role="region" tabindex="0" aria-label="当日街道地图，可用加减键缩放和方向键移动" @keydown.esc.stop="closeCard"/>
+          <p v-if="docked" class="reading-map-caption">虚线为站点连接示意，非实际交通路线。金色地点待确认。</p>
+        </div>
+      </Teleport>
+    </div>
     <Teleport v-if="popupHost && previewStop" :to="popupHost">
       <article class="place-card" :aria-label="`${previewStop.name}站点卡片`" @pointerenter="cancelClose" @pointerleave="scheduleClose" @focusin="cancelClose" @focusout="scheduleClose" @keydown.esc.stop="closeCard">
         <div class="place-photo">
@@ -28,17 +36,19 @@
     <p class="map-caption">编号按你提供的顺序排列。虚线仅连接站点，不代表实际道路或乘车路线；金色标记为待确认地点。</p>
     <div class="day-stops" aria-label="当日停靠点"><button v-for="(stop, index) in day.stops" :key="stop.id" :class="{ chosen: active === stop.id, provisional: stop.provisional }" :aria-pressed="active === stop.id" @click="focusStop(stop)"><b>{{ String(index + 1).padStart(2, '0') }}</b><span>{{ stop.name }}<small>{{ stop.category }}{{ stop.provisional ? ' · 待确认' : '' }}</small></span></button></div>
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
-    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="chapter in day.journal" :key="chapter.heading"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
+    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><a :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="queueReading" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
     <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span><span>{{ days.length === 1 ? '后续日期待提供，暂不生成空白旅程。' : '使用上方左右按钮按日期翻页' }}</span></footer>
   </section>
 </template>
 
 <script setup>
-import { computed, ref, shallowRef, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, ref, reactive, shallowRef, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import L from 'leaflet'
+import { chapterStops } from '../utils/journey-progress'
 import 'leaflet/dist/leaflet.css'
-const props = defineProps({ days: { type: Array, required: true } })
+const props = defineProps({ days: { type: Array, required: true }, mapHost: { default: null } })
+const emit = defineEmits(['layout'])
 const days = computed(() => [...props.days].sort((a, b) => a.date.localeCompare(b.date)))
 const page = ref(0)
 const day = computed(() => days.value[page.value])
@@ -52,7 +62,7 @@ const previewStop = ref(null)
 const previewIndex = computed(() => day.value.stops.findIndex(s => s.id === previewStop.value?.id))
 const popupHost = shallowRef(null)
 const photoFailed = ref(false)
-let map, tiles, layers, observer, popup, closeTimer
+let map, tiles, layers, observer, popup, closeTimer, progressLine
 let cardRevision = 0
 const markers = new Map()
 function cancelClose() { clearTimeout(closeTimer) }
@@ -115,6 +125,7 @@ function fit(includeArrival) {
   else map.setView([36.2, 138.2], 5, { animate: false })
 }
 function focusStop(stop) {
+  if (docked.value) following.value = false
   cancelClose()
   active.value = stop.id
   map?.setView(stop.geo, stop.zoom || 16, { animate: false })
@@ -134,6 +145,7 @@ function renderDay() {
     }).on('mouseout', scheduleClose).on('click', () => focusStop(stop))
     markers.set(stop.id, marker)
   })
+  progressLine = L.polyline([], { color: '#34594f', weight: 4, dashArray: '5 8', interactive: false }).addTo(layers)
   fit(false)
 }
 function turn(delta) {
@@ -179,16 +191,122 @@ onMounted(() => {
     else if (previewStop.value) showCard(previewStop.value, !!active.value)
   })
   observer.observe(mapEl.value)
+  scrollRoot = journeyEl.value.closest('.trip-dialog-body')
+  scrollRoot?.addEventListener('scroll', queueReading, { passive: true })
+  window.addEventListener('resize', queueReading)
+  mapEl.value.addEventListener('pointerdown', pauseFollowing)
+  mapEl.value.addEventListener('keydown', pauseFollowing)
+  queueReading()
 })
 onBeforeUnmount(() => {
   cancelClose()
+  cancelAnimationFrame(readingFrame)
+  scrollRoot?.removeEventListener('scroll', queueReading)
+  window.removeEventListener('resize', queueReading)
+  mapEl.value?.removeEventListener('pointerdown', pauseFollowing)
+  mapEl.value?.removeEventListener('keydown', pauseFollowing)
+  emit('layout', false)
   mapEl.value?.removeEventListener('wheel', gateMapWheel, true)
   observer?.disconnect()
   map?.remove()
 })
+const failedPhotos = reactive(new Set())
+function photosForChapter(index) {
+  const chapter = day.value.journal[index]
+  const candidates = chapter.photos?.length ? chapter.photos : (chapterRoutes.value[index] || []).flatMap(i => {
+    const stop = day.value.stops[i]
+    return stop.photo?.url ? [{ ...stop.photo, alt: stop.photo.alt || stop.name }] : []
+  })
+  return candidates.filter((photo, i) => !failedPhotos.has(photo.url) && candidates.findIndex(p => p.url === photo.url) === i)
+}
+const journeyEl = ref(null)
+const mapSlot = ref(null)
+const docked = ref(false)
+const slotHeight = ref(0)
+const following = ref(true)
+const readingChapter = ref(-1)
+const chapterRoutes = computed(() => chapterStops(day.value))
+const readingLabel = computed(() => {
+  const indices = chapterRoutes.value[readingChapter.value] || []
+  return indices.length ? indices.map(i => day.value.stops[i].name).join(' → ') : '这一日的足迹'
+})
+let scrollRoot, readingFrame, changingLayout = false, lastRoute = '__reset__'
+function pauseFollowing() { if (docked.value) following.value = false }
+function resumeFollowing() { following.value = true; lastRoute = '__reset__'; updateReadingMap() }
+function updateReadingMap() {
+  if (!map || !docked.value || !following.value) return
+  const indices = chapterRoutes.value[readingChapter.value] || []
+  const atEnd = readingChapter.value >= 0 && scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight < 28
+  const key = atEnd ? '__end__' : indices.join(',')
+  if (lastRoute === key) return
+  lastRoute = key
+  closeCard()
+  const end = atEnd ? day.value.stops.length - 1 : indices.length ? Math.max(...indices) : -1
+  progressLine?.setLatLngs(day.value.stops.slice(0, end + 1).map(s => s.geo))
+  day.value.stops.forEach((stop, i) => {
+    const element = markers.get(stop.id)?.getElement()
+    element?.classList.toggle('reading-pin', indices.includes(i))
+    element?.classList.toggle('future-pin', end >= 0 && i > end)
+  })
+  const points = atEnd ? day.value.stops.map(s => s.geo) : indices.map(i => day.value.stops[i].geo)
+  if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [42, 42], maxZoom: 14, animate: !window.matchMedia('(prefers-reduced-motion: reduce)').matches })
+  else fit(false)
+}
+function queueReading() {
+  cancelAnimationFrame(readingFrame)
+  readingFrame = requestAnimationFrame(syncReading)
+}
+async function syncReading() {
+  if (!scrollRoot || changingLayout || !mapSlot.value) return
+  const top = scrollRoot.getBoundingClientRect().top
+  const shouldDock = !!props.mapHost && window.innerWidth >= 1000 && mapSlot.value.getBoundingClientRect().bottom < top + (docked.value ? 64 : 0)
+  if (shouldDock !== docked.value) {
+    changingLayout = true
+    const blocks = [...journeyEl.value.querySelectorAll('.day-stops, .day-journal header, [data-chapter], .day-references')]
+    const anchor = blocks.find(el => el.getBoundingClientRect().bottom > top + 24) || mapSlot.value
+    const before = anchor.getBoundingClientRect().top
+    if (shouldDock) slotHeight.value = mapSlot.value.offsetHeight
+    docked.value = shouldDock
+    emit('layout', shouldDock)
+    await nextTick()
+    scrollRoot.scrollTop += anchor.getBoundingClientRect().top - before
+    map.invalidateSize({ pan: false })
+    lastRoute = '__reset__'
+    following.value = true
+    if (!shouldDock) {
+      progressLine?.setLatLngs([])
+      markers.forEach(marker => marker.getElement()?.classList.remove('reading-pin', 'future-pin'))
+      fit(false)
+    }
+    changingLayout = false
+  }
+  const line = scrollRoot.getBoundingClientRect().top + Math.min(180, scrollRoot.clientHeight * .3)
+  const chapters = [...journeyEl.value.querySelectorAll('[data-chapter]')]
+  let index = -1
+  chapters.forEach((chapter, i) => { if (chapter.getBoundingClientRect().top <= line) index = i })
+  readingChapter.value = index
+  updateReadingMap()
+}
+watch(page, () => { readingChapter.value = -1; lastRoute = '__reset__'; following.value = true; scrollRoot?.scrollTo({ top: 0 }); queueReading() })
 </script>
 
 <style scoped>
+.chapter-photos { display:grid; gap:20px; margin:24px 0 36px; }
+.chapter-photos figure { margin:0; }
+.chapter-photos img { display:block; width:100%; aspect-ratio:4/3; object-fit:contain; background:#e8e6dc; border-radius:10px; }
+.chapter-photos figcaption { font-size:11px; line-height:1.8; color:#637466; margin-top:8px; }
+.chapter-photos figcaption a { margin-left:8px; color:inherit; }
+.reading-map.docked { height:100%; display:flex; flex-direction:column; }
+.reading-map-heading { display:grid; gap:10px; padding:4px 0 16px; }
+.reading-map-heading > span { font-size:11px; letter-spacing:.12em; color:#6d7b6d; }
+.reading-map-heading strong { font:19px/1.7 Georgia,'Songti SC',serif; }
+.reading-map-heading small,.reading-map-heading button { font-size:11px; text-align:left; }
+.reading-map-heading button { color:#34594f; text-decoration:underline; }
+.docked .street-map { flex:1; min-height:160px; height:auto; }
+.reading-map-caption { font-size:10px; line-height:1.8; margin:10px 0 0; }
+.day-journal section.reading-chapter { box-shadow:-12px 0 0 -10px #799884; }
+:deep(.day-pin.reading-pin) { box-shadow:0 0 0 5px #c9d9bd,0 2px 9px #1235; }
+:deep(.day-pin.future-pin) { opacity:.4; }
 .daily-journey { color:#304b48; background:#f4f1e7; border-radius:18px; overflow:hidden; padding:24px; }
 .day-pager { display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #3a66522a; padding-bottom:17px; }
 .day-pager div { display:grid; text-align:center; gap:3px; }

@@ -5,33 +5,8 @@
 				configdata.welcometitle }}</div>
 		</div>
 		<div>
-			<v-row align="center">
-				<v-col cols="12" md="8">
-					<!-- PC 端搜索栏 -->
-					<v-text-field class="v-card web-search" :style="xs || sm ? { 'display': 'none' } : {}" v-model="searchQuery"
-						placeholder="搜索网络或输入网址" aria-label="搜索网络或输入网址" variant="outlined" rounded hide-details="true" @keyup.enter="performSearch">
-						<template v-slot:prepend-inner>
-							<v-menu>
-								<template v-slot:activator="{ props }">
-									<v-btn variant="text" v-bind="props" class="engine-btn">
-										{{ selectedEngine.title }}
-										<v-icon icon="mdi-chevron-down"></v-icon>
-									</v-btn>
-								</template>
-								<v-list class="glass-list">
-									<v-list-item v-for="engine in searchEngines" :key="engine.value"
-										@click="selectedEngine = engine" density="compact">
-										{{ engine.title }}
-									</v-list-item>
-								</v-list>
-							</v-menu>
-						</template>
-						<template v-slot:append-inner>
-							<v-btn :icon="isUrl ? 'mdi-earth' : 'mdi-magnify'" variant="text"
-								@click="performSearch"></v-btn>
-						</template>
-					</v-text-field>
-
+			<v-row align="center" justify="end">
+				<v-col v-if="xs || sm" cols="12">
 					<!-- 手机端搜索区域 -->
 					<div v-if="xs || sm" class="mobile-search-wrapper">
 						<!-- 未展开：仅显示搜索图标按钮 -->

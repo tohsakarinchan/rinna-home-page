@@ -39,7 +39,7 @@
       <v-card class="passport-dialog" :class="{ 'journey-split': journeySplit }">
         <header class="trip-dialog-header"><div><span class="eyebrow">{{ selected ? `JOURNEY / ${selected.month}` : 'ALL JOURNEYS / JAPAN' }}</span><h2>{{ selected?.title || '我的日本足迹' }}</h2></div><v-btn icon="mdi-close" aria-label="关闭旅行" variant="text" @click="dialog = false"/></header>
         <div class="trip-dialog-body">
-          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :map-host="journeyMapHost" @layout="journeySplit = $event" />
+          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
           <template v-else>
           <div v-if="selected" class="arrival-memory" :class="{ 'animate-stamp': effects }" :style="{ '--ink': selected.color }"><v-icon :icon="selected.icon" size="30"/><span>{{ selected.stamp }}</span><strong>{{ selected.month }}</strong></div>
           <p class="trip-location-text">{{ selected?.places || '收藏旅行中到访过的地方。' }}</p>

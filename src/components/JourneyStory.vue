@@ -34,6 +34,7 @@ onMounted(() => { query = matchMedia('(prefers-reduced-motion: reduce)'); prefer
 onBeforeUnmount(() => { query?.removeEventListener('change', preference); emit('layout', false) })
 </script>
 <style scoped>
-.bookend{color:#44656b;min-height:520px;padding:20px 0 60px}.bookend nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #ced6ca;padding-bottom:28px;font-size:12px;letter-spacing:.08em}.bookend button{color:inherit;cursor:pointer}.bookend button:disabled{opacity:.25;cursor:default}.kicker{font-size:11px;letter-spacing:.2em;margin:70px 0 24px}.bookend h2{font:38px Georgia,'Songti SC',serif}.body{white-space:pre-wrap;line-height:2.2;max-width:650px;margin:28px 0}.primary{border:1px solid #a8b7ac;border-radius:30px;padding:14px 24px;margin-top:28px;background:transparent}
-@media(max-width:600px){.bookend nav{font-size:10px}.bookend h2{font-size:30px}}
+.bookend{color:#304b48;background:#f4f1e7;border-radius:18px;overflow:hidden;min-height:520px;padding:24px}.bookend nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #ced6ca;padding-bottom:17px;font-size:10px;letter-spacing:.13em}.bookend button{color:inherit;cursor:pointer}.bookend button:disabled{opacity:.25;cursor:default}.kicker{font-size:11px;letter-spacing:.2em;margin:30px 0 8px}.bookend h2{font:500 30px Georgia,'Songti SC',serif}.body{white-space:pre-wrap;font-size:15px;line-height:2.2;max-width:650px;margin:24px 0;color:#52665b}.primary{border:1px solid #a8b7ac;border-radius:30px;padding:14px 24px;margin-top:28px;background:transparent}
+@media(max-width:600px){.bookend nav{font-size:10px}.bookend{padding:16px 12px}.bookend h2{font-size:26px}}
 </style>
+

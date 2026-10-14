@@ -38,7 +38,12 @@
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
     <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><a :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
-    <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span><span>{{ days.length === 1 ? '后续日期待提供，暂不生成空白旅程。' : '使用上方左右按钮按日期翻页' }}</span></footer>
+    <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span></footer>
+    <nav class="bottom-pager" aria-label="正文底部翻页">
+      <button @click="turn(-1)"><span aria-hidden="true">←</span> {{ page === 0 ? '序言' : '上一天' }}</button>
+      <span>{{ day.date.replaceAll('-', '.') }}</span>
+      <button @click="turn(1)">{{ page === days.length - 1 ? '归程与总结' : '下一天' }} <span aria-hidden="true">→</span></button>
+    </nav>
   </section>
 </template>
 
@@ -167,7 +172,15 @@ function gateMapWheel(event) {
   pauseFollowing()
   event.preventDefault()
 }
-watch(page, async () => { await nextTick(); if (map) renderDay() })
+watch(page, async (current, previous) => {
+  await nextTick()
+  if (map) renderDay()
+  animateElement(journeyEl.value, [
+    { opacity: .35, transform: 'translateX(' + (current > previous ? 14 : -14) + 'px)' },
+    { opacity: 1, transform: 'translateX(0)' }
+  ], 260)
+  journeyEl.value?.querySelector('.day-pager button')?.focus({ preventScroll: true })
+})
 onMounted(() => {
   mapEl.value.addEventListener('wheel', gateMapWheel, { capture: true, passive: false })
   map = L.map(mapEl.value, {
@@ -365,6 +378,10 @@ watch(page, () => { readingChapter.value = -1; lastRoute = '__reset__'; followin
 </script>
 
 <style scoped>
+.bottom-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid #3a66522a}
+.bottom-pager button{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 18px;border:1px solid #345a4744;border-radius:28px;color:#304b48;background:transparent;font:inherit;font-size:13px;cursor:pointer;transition:background 160ms ease}
+.bottom-pager button:hover{background:#345a4710}.bottom-pager button:focus-visible{outline:2px solid #34594f;outline-offset:3px}.bottom-pager>span{font:12px Georgia,serif;color:#6d7b6d}
+@media(max-width:600px){.bottom-pager{gap:8px}.bottom-pager button{padding:10px 12px;font-size:12px}.bottom-pager>span{display:none}}
 .reading-label-enter-active,.reading-label-leave-active { transition:opacity 140ms ease,transform 180ms ease; }
 .reading-label-enter-from { opacity:0; transform:translateY(5px); }
 .reading-label-leave-to { opacity:0; transform:translateY(-3px); }
@@ -460,4 +477,5 @@ button:focus-visible { outline:3px solid #58a7af; outline-offset:3px; }
 .place-card a:focus-visible { outline:2px solid #58a7af; outline-offset:2px; }
 @media(max-width:600px) { .daily-journey { padding:16px 12px; } .day-stops { grid-template-columns:repeat(2,minmax(0,1fr)); } .day-title h2 { font-size:26px; } .day-end { flex-direction:column; } }
 </style>
+
 

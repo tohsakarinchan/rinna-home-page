@@ -13,7 +13,7 @@
 </div>
 </template>
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { computed, ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import DailyJourney from './DailyJourney.vue'
 import JourneyFlight from './JourneyFlight.vue'
 import { journeyStories } from '../constants/journey-stories'
@@ -22,7 +22,13 @@ const emit = defineEmits(['layout'])
 const config = computed(() => props.story || journeyStories[props.tripId] || {})
 const chapter = ref('prologue'), entryPage = ref(0), flight = ref(null), reduced = ref(false), root = ref(null)
 const bookend = computed(() => config.value[chapter.value] || { title: chapter.value === 'prologue' ? '出发之前' : '旅程之后' })
-let destination = 'days', query
+let destination = 'days', query, chapterAnimation
+watch([chapter, flight], async () => {
+  chapterAnimation?.cancel()
+  await nextTick()
+  if (flight.value || !props.motionEnabled || reduced.value) return
+  chapterAnimation = root.value?.animate([{opacity:.35,transform:'translateY(10px)'},{opacity:1,transform:'translateY(0)'}],{duration:260,easing:'ease-out'})
+})
 async function reset() { emit('layout', false); await nextTick(); root.value?.closest('.trip-dialog-body')?.scrollTo({ top: 0 }) }
 function travel(route, target) { destination = target; flight.value = route || null; chapter.value = target; reset() }
 function depart() { entryPage.value = 0; travel(config.value.outbound, 'days') }
@@ -31,10 +37,11 @@ function back() { entryPage.value = props.days.length - 1; chapter.value = 'days
 function boundary(direction) { if (direction < 0) { chapter.value = 'prologue'; reset() } else travel(config.value.inbound, 'epilogue') }
 function preference() { reduced.value = query.matches }
 onMounted(() => { query = matchMedia('(prefers-reduced-motion: reduce)'); preference(); query.addEventListener('change', preference) })
-onBeforeUnmount(() => { query?.removeEventListener('change', preference); emit('layout', false) })
+onBeforeUnmount(() => { chapterAnimation?.cancel(); query?.removeEventListener('change', preference); emit('layout', false) })
 </script>
 <style scoped>
 .bookend{color:#304b48;background:#f4f1e7;border-radius:18px;overflow:hidden;min-height:520px;padding:24px}.bookend nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #ced6ca;padding-bottom:17px;font-size:10px;letter-spacing:.13em}.bookend button{color:inherit;cursor:pointer}.bookend button:disabled{opacity:.25;cursor:default}.kicker{font-size:11px;letter-spacing:.2em;margin:30px 0 8px}.bookend h2{font:500 30px Georgia,'Songti SC',serif}.body{white-space:pre-wrap;font-size:15px;line-height:2.2;max-width:650px;margin:24px 0;color:#52665b}.primary{border:1px solid #a8b7ac;border-radius:30px;padding:14px 24px;margin-top:28px;background:transparent}
 @media(max-width:600px){.bookend nav{font-size:10px}.bookend{padding:16px 12px}.bookend h2{font-size:26px}}
 </style>
+
 

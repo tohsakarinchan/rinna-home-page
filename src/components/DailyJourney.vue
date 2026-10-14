@@ -1,12 +1,12 @@
 <template>
   <section ref="journeyEl" class="daily-journey" :class="{ 'motion-off': !motionAllowed }" aria-label="每日旅行页">
     <nav class="day-pager" aria-label="按日期翻页">
-      <button :disabled="page === 0" aria-label="前一天" @click="turn(-1)">←</button>
+      <button aria-label="上一章" @click="turn(-1)">←</button>
       <div aria-live="polite"><span>DAY {{ String(day.day).padStart(2, '0') }} · {{ weekday }}</span><strong>{{ day.date.replaceAll('-', '.') }}</strong></div>
-      <button :disabled="page === days.length - 1" aria-label="后一天" @click="turn(1)">→</button>
+      <button aria-label="下一章" @click="turn(1)">→</button>
     </nav>
-    <header class="day-title"><span>TOKYO / A DAY IN THE STORY</span><h2>{{ day.title }}</h2><p>{{ day.subtitle }}</p></header>
-    <div class="map-toolbar"><div><button :aria-pressed="!active && !wholeDay" @click="fit(false)">东京活动范围</button><button :aria-pressed="!active && wholeDay" @click="fit(true)">含机场全日范围</button></div><span aria-live="polite">{{ selectedStop ? `正在查看：${selectedStop.name}` : '点击站点，放大到街区' }}</span></div>
+    <header class="day-title"><span>A DAY IN THE STORY</span><h2>{{ day.title }}</h2><p>{{ day.subtitle }}</p></header>
+    <div class="map-toolbar"><div><button :aria-pressed="!active" @click="fit(false)">当日活动范围</button></div><span aria-live="polite">{{ selectedStop ? `正在查看：${selectedStop.name}` : '点击站点，放大到街区' }}</span></div>
     <p class="map-help">Ctrl + 滚轮缩放 · 点击地图后按 + / − 缩放、方向键移动 · 手机可双指缩放</p>
     <div ref="mapSlot" class="map-slot" :style="docked ? { height: slotHeight + 'px' } : {}">
       <Teleport :to="mapHost || 'body'" :disabled="!docked || !mapHost">
@@ -32,32 +32,41 @@
         </div>
       </article>
     </Teleport>
-    <p v-if="tileError" class="map-error" role="status">地图底图暂时无法加载；站点与游记仍可阅读。<button @click="retryTiles">重新加载底图</button></p>
+    <p v-if="tilesLoading && !tileError" class="map-error" role="status">正在加载地图底图，正文和站点可先阅读…</p><p v-if="tileError" class="map-error" role="status">地图底图暂时无法加载；站点与游记仍可阅读。<button @click="retryTiles">重新加载底图</button></p>
     <p class="map-caption">编号按你提供的顺序排列。虚线仅连接站点，不代表实际道路或乘车路线；金色标记为待确认地点。</p>
     <div class="day-stops" aria-label="当日停靠点"><button v-for="(stop, index) in day.stops" :key="stop.id" :class="{ chosen: active === stop.id, provisional: stop.provisional }" :aria-pressed="active === stop.id" @click="focusStop(stop)"><b>{{ String(index + 1).padStart(2, '0') }}</b><span>{{ stop.name }}<small>{{ stop.category }}{{ stop.provisional ? ' · 待确认' : '' }}</small></span></button></div>
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
-    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><a :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
+    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><JourneyImage :src="photo.url" :alt="photo.alt" @load="queueReading" /><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
-    <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span><span>{{ days.length === 1 ? '后续日期待提供，暂不生成空白旅程。' : '使用上方左右按钮按日期翻页' }}</span></footer>
+    <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span></footer>
+    <nav class="bottom-pager" aria-label="正文底部翻页">
+      <button @click="turn(-1)"><span aria-hidden="true">←</span> {{ page === 0 ? '序言' : '上一天' }}</button>
+      <span>{{ day.date.replaceAll('-', '.') }}</span>
+      <button @click="turn(1)">{{ page === days.length - 1 ? '归程与总结' : '下一天' }} <span aria-hidden="true">→</span></button>
+    </nav>
   </section>
 </template>
 
 <script setup>
 import { computed, ref, reactive, shallowRef, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import L from 'leaflet'
+import JourneyImage from './JourneyImage.vue'
+import { cityStops } from '../constants/journey-stories'
 import { chapterStops, routePrefix } from '../utils/journey-progress'
 import 'leaflet/dist/leaflet.css'
-const props = defineProps({ days: { type: Array, required: true }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
-const emit = defineEmits(['layout'])
-const days = computed(() => [...props.days].sort((a, b) => a.date.localeCompare(b.date)))
-const page = ref(0)
+const props = defineProps({ days: { type: Array, required: true }, initialPage: { type: Number, default: 0 }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
+const emit = defineEmits(['layout', 'boundary'])
+const days = computed(() => props.days.map(d => ({ ...d, stops: cityStops(d.stops) })).sort((a, b) => a.date.localeCompare(b.date)))
+const page = ref(Math.max(0, Math.min(props.initialPage, days.value.length - 1)))
 const day = computed(() => days.value[page.value])
 const weekday = computed(() => new Intl.DateTimeFormat('zh-CN', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${day.value.date}T12:00:00Z`)))
 const mapEl = ref(null)
-const wholeDay = ref(false)
+
 const active = ref('')
 const selectedStop = computed(() => day.value.stops.find(s => s.id === active.value))
 const tileError = ref(false)
+const tilesLoading = ref(false)
+let tileRetryTimer, tileRetries = 0
 const previewStop = ref(null)
 const previewIndex = computed(() => day.value.stops.findIndex(s => s.id === previewStop.value?.id))
 const popupHost = shallowRef(null)
@@ -116,11 +125,11 @@ async function showCard(stop, pinned = false) {
   }
 }
 function fit(includeArrival) {
-  wholeDay.value = includeArrival
+
   closeCard()
   if (!map) return
   map.closePopup()
-  const stops = day.value.stops.filter(s => Array.isArray(s.geo) && (includeArrival || !s.outsideCity))
+  const stops = day.value.stops.filter(s => Array.isArray(s.geo))
   if (stops.length) map.fitBounds(L.latLngBounds(stops.map(s => s.geo)), { padding: [35, 35], maxZoom: 14, animate: false })
   else map.setView([36.2, 138.2], 5, { animate: false })
 }
@@ -152,10 +161,15 @@ function renderDay() {
 }
 function turn(delta) {
   const next = page.value + delta
-  if (next < 0 || next >= days.value.length) return
+  if (next < 0 || next >= days.value.length) { emit('boundary', delta); return }
   page.value = next
 }
-function retryTiles() { tileError.value = false; tiles?.redraw() }
+function retryTiles() {
+  clearTimeout(tileRetryTimer); tileRetryTimer = null
+  tileError.value = false
+  tiles?.redraw()
+}
+function recoverMap() { if (tileError.value) { tileRetries = 0; retryTiles() } }
 function gateMapWheel(event) {
   // Capture before Leaflet's wheel listener: ordinary scrolling stays with the page.
   // Let popup content scroll normally and leave browser zoom shortcuts outside the map alone.
@@ -166,7 +180,15 @@ function gateMapWheel(event) {
   pauseFollowing()
   event.preventDefault()
 }
-watch(page, async () => { await nextTick(); if (map) renderDay() })
+watch(page, async (current, previous) => {
+  await nextTick()
+  if (map) renderDay()
+  animateElement(journeyEl.value, [
+    { opacity: .35, transform: 'translateX(' + (current > previous ? 14 : -14) + 'px)' },
+    { opacity: 1, transform: 'translateX(0)' }
+  ], 260)
+  journeyEl.value?.querySelector('.day-pager button')?.focus({ preventScroll: true })
+})
 onMounted(() => {
   mapEl.value.addEventListener('wheel', gateMapWheel, { capture: true, passive: false })
   map = L.map(mapEl.value, {
@@ -182,8 +204,16 @@ onMounted(() => {
   map.on('popupclose', () => { cancelClose(); active.value = ''; previewStop.value = null })
   map.on('click', closeCard)
   map.on('dragstart zoomstart', () => { if (!active.value) closeCard() })
-  tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })
-  tiles.on('tileerror', () => { tileError.value = true }).addTo(map)
+  tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 2, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })
+  tiles.on('loading', () => { tilesLoading.value = true })
+  tiles.on('load', () => { tilesLoading.value = false })
+  tiles.on('tileerror', () => {
+    tileError.value = true
+    if (tileRetries < 2 && !tileRetryTimer && navigator.onLine) {
+      tileRetryTimer = setTimeout(() => { tileRetryTimer = null; tileRetries++; retryTiles() }, 2500 * (tileRetries + 1))
+    }
+  }).addTo(map)
+  window.addEventListener('online', recoverMap)
   layers = L.layerGroup().addTo(map)
   renderDay()
   let firstResize = true
@@ -205,6 +235,7 @@ onMounted(() => {
   queueReading()
 })
 onBeforeUnmount(() => {
+  clearTimeout(tileRetryTimer); window.removeEventListener('online', recoverMap)
   cancelClose()
   stopMotion()
   motionQuery?.removeEventListener('change', updateMotionPreference)
@@ -218,14 +249,14 @@ onBeforeUnmount(() => {
   observer?.disconnect()
   map?.remove()
 })
-const failedPhotos = reactive(new Set())
+
 function photosForChapter(index) {
   const chapter = day.value.journal[index]
   const candidates = chapter.photos?.length ? chapter.photos : (chapterRoutes.value[index] || []).flatMap(i => {
     const stop = day.value.stops[i]
     return stop.photo?.url ? [{ ...stop.photo, alt: stop.photo.alt || stop.name }] : []
   })
-  return candidates.filter((photo, i) => !failedPhotos.has(photo.url) && candidates.findIndex(p => p.url === photo.url) === i)
+  return candidates.filter((photo, i) => candidates.findIndex(p => p.url === photo.url) === i)
 }
 const readingMapEl = ref(null)
 const reducedMotion = ref(false)
@@ -364,6 +395,10 @@ watch(page, () => { readingChapter.value = -1; lastRoute = '__reset__'; followin
 </script>
 
 <style scoped>
+.bottom-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid #3a66522a}
+.bottom-pager button{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 18px;border:1px solid #345a4744;border-radius:28px;color:#304b48;background:transparent;font:inherit;font-size:13px;cursor:pointer;transition:background 160ms ease}
+.bottom-pager button:hover{background:#345a4710}.bottom-pager button:focus-visible{outline:2px solid #34594f;outline-offset:3px}.bottom-pager>span{font:12px Georgia,serif;color:#6d7b6d}
+@media(max-width:600px){.bottom-pager{gap:8px}.bottom-pager button{padding:10px 12px;font-size:12px}.bottom-pager>span{display:none}}
 .reading-label-enter-active,.reading-label-leave-active { transition:opacity 140ms ease,transform 180ms ease; }
 .reading-label-enter-from { opacity:0; transform:translateY(5px); }
 .reading-label-leave-to { opacity:0; transform:translateY(-3px); }
@@ -459,3 +494,6 @@ button:focus-visible { outline:3px solid #58a7af; outline-offset:3px; }
 .place-card a:focus-visible { outline:2px solid #58a7af; outline-offset:2px; }
 @media(max-width:600px) { .daily-journey { padding:16px 12px; } .day-stops { grid-template-columns:repeat(2,minmax(0,1fr)); } .day-title h2 { font-size:26px; } .day-end { flex-direction:column; } }
 </style>
+
+
+

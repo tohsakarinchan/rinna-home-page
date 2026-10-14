@@ -32,14 +32,14 @@
           <span class="footprint-caption">{{ allPrefectures.length }} / 47 个都道府县</span><span class="footprint-link">展开全部旅行印记</span>
         </button>
         <div class="passport-note"><span class="eyebrow">ABOUT THIS EDITION</span><p>先收藏到过的地方，<br>再慢慢补上沿途的故事。</p><small>目前按已确认月份展示；详细日期与旅行路线待补充。贴纸名称与印章为纪念设计。</small></div>
-        <details class="journal-links"><summary>文字游记</summary><p v-if="articlesError">暂时无法加载 <button @click="loadArticles">重试</button></p><p v-else-if="articlesLoading">正在加载…</p><template v-else><router-link v-for="post in articles" :key="post.id" :to="`/blog/${post.slug}`">{{ post.title }} ↗</router-link><p v-if="!articles.length">故事正在整理中。</p></template></details>
+        <details v-if="showStandaloneJournal" class="journal-links"><summary>文字游记</summary><p v-if="articlesError">暂时无法加载 <button @click="loadArticles">重试</button></p><p v-else-if="articlesLoading">正在加载…</p><template v-else><router-link v-for="post in articles" :key="post.id" :to="`/blog/${post.slug}`">{{ post.title }} ↗</router-link><p v-if="!articles.length">故事正在整理中。</p></template></details>
       </aside>
     </div>
     <v-dialog v-model="dialog" :max-width="selectedDays.length ? (journeySplit ? 1320 : 920) : 760" aria-label="旅行记忆">
       <v-card class="passport-dialog" :class="{ 'journey-split': journeySplit }">
         <header class="trip-dialog-header"><div><span class="eyebrow">{{ selected ? `JOURNEY / ${selected.month}` : 'ALL JOURNEYS / JAPAN' }}</span><h2>{{ selected?.title || '我的日本足迹' }}</h2></div><v-btn icon="mdi-close" aria-label="关闭旅行" variant="text" @click="dialog = false"/></header>
         <div class="trip-dialog-body">
-          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
+          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :trip-id="selected.id" :story="selected.story" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
           <template v-else>
           <div v-if="selected" class="arrival-memory" :class="{ 'animate-stamp': effects }" :style="{ '--ink': selected.color }"><v-icon :icon="selected.icon" size="30"/><span>{{ selected.stamp }}</span><strong>{{ selected.month }}</strong></div>
           <p class="trip-location-text">{{ selected?.places || '收藏旅行中到访过的地方。' }}</p>
@@ -59,8 +59,10 @@
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import JapanPrefectureMap from './JapanPrefectureMap.vue'
 import { fetchPostPage, fetchJson } from '../utils/api'
-const DailyJourney = defineAsyncComponent(() => import('./DailyJourney.vue'))
+const DailyJourney = defineAsyncComponent(() => import('./JourneyStory.vue'))
 
+// Temporarily disabled; retain articles, routes and rendering for future use.
+const showStandaloneJournal = false
 const effects = ref(true)
 const dialog = ref(false)
 const journeySplit = ref(false)
@@ -102,7 +104,7 @@ async function loadArticles() {
   } catch { articlesError.value = true }
   finally { articlesLoading.value = false }
 }
-onMounted(loadArticles)
+onMounted(() => { if (showStandaloneJournal) loadArticles() })
 onMounted(loadPassport)
 </script>
 
@@ -175,3 +177,4 @@ onMounted(loadPassport)
 @media(max-width:600px) { .passport-toolbar { align-items:flex-start; } .passport-toolbar h2 { font-size:19px; } .motion-toggle { padding:8px; font-size:10px; } .passport-book { padding:20px 16px; border-width:5px; border-left-width:8px; } .sticker-grid { grid-template-columns:1fr; gap:20px; } .travel-stamp { width:88px; height:88px; } .trip-date { font-size:25px; } .trip-places { min-height:25px; } .book-heading { font-size:7px; } .trip-dialog-body { padding:0 14px 14px; } .trip-dialog-header { padding:16px; } .arrival-memory { gap:9px; font-size:10px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } .sticker-effect { display:none; } }
 </style>
+

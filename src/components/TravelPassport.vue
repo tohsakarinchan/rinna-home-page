@@ -32,7 +32,7 @@
           <span class="footprint-caption">{{ allPrefectures.length }} / 47 个都道府县</span><span class="footprint-link">展开全部旅行印记</span>
         </button>
         <div class="passport-note"><span class="eyebrow">ABOUT THIS EDITION</span><p>先收藏到过的地方，<br>再慢慢补上沿途的故事。</p><small>目前按已确认月份展示；详细日期与旅行路线待补充。贴纸名称与印章为纪念设计。</small></div>
-        <details class="journal-links"><summary>文字游记</summary><p v-if="articlesError">暂时无法加载 <button @click="loadArticles">重试</button></p><p v-else-if="articlesLoading">正在加载…</p><template v-else><router-link v-for="post in articles" :key="post.id" :to="`/blog/${post.slug}`">{{ post.title }} ↗</router-link><p v-if="!articles.length">故事正在整理中。</p></template></details>
+        <details v-if="showStandaloneJournal" class="journal-links"><summary>文字游记</summary><p v-if="articlesError">暂时无法加载 <button @click="loadArticles">重试</button></p><p v-else-if="articlesLoading">正在加载…</p><template v-else><router-link v-for="post in articles" :key="post.id" :to="`/blog/${post.slug}`">{{ post.title }} ↗</router-link><p v-if="!articles.length">故事正在整理中。</p></template></details>
       </aside>
     </div>
     <v-dialog v-model="dialog" :max-width="selectedDays.length ? (journeySplit ? 1320 : 920) : 760" aria-label="旅行记忆">
@@ -61,6 +61,8 @@ import JapanPrefectureMap from './JapanPrefectureMap.vue'
 import { fetchPostPage, fetchJson } from '../utils/api'
 const DailyJourney = defineAsyncComponent(() => import('./DailyJourney.vue'))
 
+// Temporarily disabled; retain articles, routes and rendering for future use.
+const showStandaloneJournal = false
 const effects = ref(true)
 const dialog = ref(false)
 const journeySplit = ref(false)
@@ -102,7 +104,7 @@ async function loadArticles() {
   } catch { articlesError.value = true }
   finally { articlesLoading.value = false }
 }
-onMounted(loadArticles)
+onMounted(() => { if (showStandaloneJournal) loadArticles() })
 onMounted(loadPassport)
 </script>
 

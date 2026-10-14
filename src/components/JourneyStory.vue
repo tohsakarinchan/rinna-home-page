@@ -1,0 +1,39 @@
+<template>
+<div ref="root">
+<JourneyFlight v-if="flight" :flight="flight" :motion="motionEnabled && !reduced" @done="finish"/>
+<DailyJourney v-else-if="chapter === 'days'" :days="days" :initial-page="entryPage" :map-host="mapHost" :motion-enabled="motionEnabled" @layout="$emit('layout', $event)" @boundary="boundary"/>
+<section v-else class="bookend">
+<nav><button :disabled="chapter === 'prologue'" @click="back">← 最后一天</button><span>{{ chapter === 'prologue' ? 'PROLOGUE / 序言' : 'EPILOGUE / 总结' }}</span><button :disabled="chapter === 'epilogue'" @click="depart">第一天 →</button></nav>
+<p class="kicker">{{ chapter === 'prologue' ? 'BEFORE THE JOURNEY' : 'AFTER THE JOURNEY' }}</p>
+<h2>{{ bookend.title }}</h2>
+<p class="body">{{ bookend.text || (chapter === 'prologue' ? '出发前的碎碎念与准备，留在这里慢慢补齐。' : '旅途结束后的回望，留在这里慢慢整理。') }}</p>
+<p v-if="!bookend.text">文字待补</p>
+<button class="primary" @click="chapter === 'prologue' ? depart() : back()">{{ chapter === 'prologue' ? '带着期待，出发 →' : '← 重访最后一天' }}</button>
+</section>
+</div>
+</template>
+<script setup>
+import { computed, ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import DailyJourney from './DailyJourney.vue'
+import JourneyFlight from './JourneyFlight.vue'
+import { journeyStories } from '../constants/journey-stories'
+const props = defineProps({ tripId: String, story: Object, days: { type: Array, required: true }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
+const emit = defineEmits(['layout'])
+const config = computed(() => props.story || journeyStories[props.tripId] || {})
+const chapter = ref('prologue'), entryPage = ref(0), flight = ref(null), reduced = ref(false), root = ref(null)
+const bookend = computed(() => config.value[chapter.value] || { title: chapter.value === 'prologue' ? '出发之前' : '旅程之后' })
+let destination = 'days', query
+async function reset() { emit('layout', false); await nextTick(); root.value?.closest('.trip-dialog-body')?.scrollTo({ top: 0 }) }
+function travel(route, target) { destination = target; flight.value = route || null; chapter.value = target; reset() }
+function depart() { entryPage.value = 0; travel(config.value.outbound, 'days') }
+function finish() { flight.value = null; chapter.value = destination; reset() }
+function back() { entryPage.value = props.days.length - 1; chapter.value = 'days'; reset() }
+function boundary(direction) { if (direction < 0) { chapter.value = 'prologue'; reset() } else travel(config.value.inbound, 'epilogue') }
+function preference() { reduced.value = query.matches }
+onMounted(() => { query = matchMedia('(prefers-reduced-motion: reduce)'); preference(); query.addEventListener('change', preference) })
+onBeforeUnmount(() => { query?.removeEventListener('change', preference); emit('layout', false) })
+</script>
+<style scoped>
+.bookend{color:#44656b;min-height:520px;padding:20px 0 60px}.bookend nav{display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid #ced6ca;padding-bottom:28px;font-size:12px;letter-spacing:.08em}.bookend button{color:inherit;cursor:pointer}.bookend button:disabled{opacity:.25;cursor:default}.kicker{font-size:11px;letter-spacing:.2em;margin:70px 0 24px}.bookend h2{font:38px Georgia,'Songti SC',serif}.body{white-space:pre-wrap;line-height:2.2;max-width:650px;margin:28px 0}.primary{border:1px solid #a8b7ac;border-radius:30px;padding:14px 24px;margin-top:28px;background:transparent}
+@media(max-width:600px){.bookend nav{font-size:10px}.bookend h2{font-size:30px}}
+</style>

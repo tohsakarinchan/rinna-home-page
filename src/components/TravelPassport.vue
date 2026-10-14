@@ -39,7 +39,7 @@
       <v-card class="passport-dialog" :class="{ 'journey-split': journeySplit }">
         <header class="trip-dialog-header"><div><span class="eyebrow">{{ selected ? `JOURNEY / ${selected.month}` : 'ALL JOURNEYS / JAPAN' }}</span><h2>{{ selected?.title || '我的日本足迹' }}</h2></div><v-btn icon="mdi-close" aria-label="关闭旅行" variant="text" @click="dialog = false"/></header>
         <div class="trip-dialog-body">
-          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
+          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :trip-id="selected.id" :story="selected.story" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
           <template v-else>
           <div v-if="selected" class="arrival-memory" :class="{ 'animate-stamp': effects }" :style="{ '--ink': selected.color }"><v-icon :icon="selected.icon" size="30"/><span>{{ selected.stamp }}</span><strong>{{ selected.month }}</strong></div>
           <p class="trip-location-text">{{ selected?.places || '收藏旅行中到访过的地方。' }}</p>
@@ -59,7 +59,7 @@
 import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
 import JapanPrefectureMap from './JapanPrefectureMap.vue'
 import { fetchPostPage, fetchJson } from '../utils/api'
-const DailyJourney = defineAsyncComponent(() => import('./DailyJourney.vue'))
+const DailyJourney = defineAsyncComponent(() => import('./JourneyStory.vue'))
 
 // Temporarily disabled; retain articles, routes and rendering for future use.
 const showStandaloneJournal = false
@@ -177,3 +177,4 @@ onMounted(loadPassport)
 @media(max-width:600px) { .passport-toolbar { align-items:flex-start; } .passport-toolbar h2 { font-size:19px; } .motion-toggle { padding:8px; font-size:10px; } .passport-book { padding:20px 16px; border-width:5px; border-left-width:8px; } .sticker-grid { grid-template-columns:1fr; gap:20px; } .travel-stamp { width:88px; height:88px; } .trip-date { font-size:25px; } .trip-places { min-height:25px; } .book-heading { font-size:7px; } .trip-dialog-body { padding:0 14px 14px; } .trip-dialog-header { padding:16px; } .arrival-memory { gap:9px; font-size:10px; } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; transition:none !important; } .sticker-effect { display:none; } }
 </style>
+

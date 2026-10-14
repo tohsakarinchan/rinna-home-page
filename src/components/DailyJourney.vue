@@ -1,12 +1,12 @@
 <template>
   <section ref="journeyEl" class="daily-journey" :class="{ 'motion-off': !motionAllowed }" aria-label="每日旅行页">
     <nav class="day-pager" aria-label="按日期翻页">
-      <button :disabled="page === 0" aria-label="前一天" @click="turn(-1)">←</button>
+      <button aria-label="上一章" @click="turn(-1)">←</button>
       <div aria-live="polite"><span>DAY {{ String(day.day).padStart(2, '0') }} · {{ weekday }}</span><strong>{{ day.date.replaceAll('-', '.') }}</strong></div>
-      <button :disabled="page === days.length - 1" aria-label="后一天" @click="turn(1)">→</button>
+      <button aria-label="下一章" @click="turn(1)">→</button>
     </nav>
-    <header class="day-title"><span>TOKYO / A DAY IN THE STORY</span><h2>{{ day.title }}</h2><p>{{ day.subtitle }}</p></header>
-    <div class="map-toolbar"><div><button :aria-pressed="!active && !wholeDay" @click="fit(false)">东京活动范围</button><button :aria-pressed="!active && wholeDay" @click="fit(true)">含机场全日范围</button></div><span aria-live="polite">{{ selectedStop ? `正在查看：${selectedStop.name}` : '点击站点，放大到街区' }}</span></div>
+    <header class="day-title"><span>A DAY IN THE STORY</span><h2>{{ day.title }}</h2><p>{{ day.subtitle }}</p></header>
+    <div class="map-toolbar"><div><button :aria-pressed="!active" @click="fit(false)">当日活动范围</button></div><span aria-live="polite">{{ selectedStop ? `正在查看：${selectedStop.name}` : '点击站点，放大到街区' }}</span></div>
     <p class="map-help">Ctrl + 滚轮缩放 · 点击地图后按 + / − 缩放、方向键移动 · 手机可双指缩放</p>
     <div ref="mapSlot" class="map-slot" :style="docked ? { height: slotHeight + 'px' } : {}">
       <Teleport :to="mapHost || 'body'" :disabled="!docked || !mapHost">
@@ -45,16 +45,17 @@
 <script setup>
 import { computed, ref, reactive, shallowRef, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import L from 'leaflet'
+import { cityStops } from '../constants/journey-stories'
 import { chapterStops, routePrefix } from '../utils/journey-progress'
 import 'leaflet/dist/leaflet.css'
-const props = defineProps({ days: { type: Array, required: true }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
-const emit = defineEmits(['layout'])
-const days = computed(() => [...props.days].sort((a, b) => a.date.localeCompare(b.date)))
-const page = ref(0)
+const props = defineProps({ days: { type: Array, required: true }, initialPage: { type: Number, default: 0 }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
+const emit = defineEmits(['layout', 'boundary'])
+const days = computed(() => props.days.map(d => ({ ...d, stops: cityStops(d.stops) })).sort((a, b) => a.date.localeCompare(b.date)))
+const page = ref(Math.max(0, Math.min(props.initialPage, days.value.length - 1)))
 const day = computed(() => days.value[page.value])
 const weekday = computed(() => new Intl.DateTimeFormat('zh-CN', { weekday: 'long', timeZone: 'UTC' }).format(new Date(`${day.value.date}T12:00:00Z`)))
 const mapEl = ref(null)
-const wholeDay = ref(false)
+
 const active = ref('')
 const selectedStop = computed(() => day.value.stops.find(s => s.id === active.value))
 const tileError = ref(false)
@@ -116,11 +117,11 @@ async function showCard(stop, pinned = false) {
   }
 }
 function fit(includeArrival) {
-  wholeDay.value = includeArrival
+
   closeCard()
   if (!map) return
   map.closePopup()
-  const stops = day.value.stops.filter(s => Array.isArray(s.geo) && (includeArrival || !s.outsideCity))
+  const stops = day.value.stops.filter(s => Array.isArray(s.geo))
   if (stops.length) map.fitBounds(L.latLngBounds(stops.map(s => s.geo)), { padding: [35, 35], maxZoom: 14, animate: false })
   else map.setView([36.2, 138.2], 5, { animate: false })
 }
@@ -152,7 +153,7 @@ function renderDay() {
 }
 function turn(delta) {
   const next = page.value + delta
-  if (next < 0 || next >= days.value.length) return
+  if (next < 0 || next >= days.value.length) { emit('boundary', delta); return }
   page.value = next
 }
 function retryTiles() { tileError.value = false; tiles?.redraw() }
@@ -459,3 +460,4 @@ button:focus-visible { outline:3px solid #58a7af; outline-offset:3px; }
 .place-card a:focus-visible { outline:2px solid #58a7af; outline-offset:2px; }
 @media(max-width:600px) { .daily-journey { padding:16px 12px; } .day-stops { grid-template-columns:repeat(2,minmax(0,1fr)); } .day-title h2 { font-size:26px; } .day-end { flex-direction:column; } }
 </style>
+

@@ -35,11 +35,11 @@
         <details class="journal-links"><summary>文字游记</summary><p v-if="articlesError">暂时无法加载 <button @click="loadArticles">重试</button></p><p v-else-if="articlesLoading">正在加载…</p><template v-else><router-link v-for="post in articles" :key="post.id" :to="`/blog/${post.slug}`">{{ post.title }} ↗</router-link><p v-if="!articles.length">故事正在整理中。</p></template></details>
       </aside>
     </div>
-    <v-dialog v-model="dialog" :max-width="selectedDays.length ? 920 : 760" aria-label="旅行记忆">
-      <v-card class="passport-dialog">
+    <v-dialog v-model="dialog" :max-width="selectedDays.length ? (journeySplit ? 1320 : 920) : 760" aria-label="旅行记忆">
+      <v-card class="passport-dialog" :class="{ 'journey-split': journeySplit }">
         <header class="trip-dialog-header"><div><span class="eyebrow">{{ selected ? `JOURNEY / ${selected.month}` : 'ALL JOURNEYS / JAPAN' }}</span><h2>{{ selected?.title || '我的日本足迹' }}</h2></div><v-btn icon="mdi-close" aria-label="关闭旅行" variant="text" @click="dialog = false"/></header>
         <div class="trip-dialog-body">
-          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" />
+          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
           <template v-else>
           <div v-if="selected" class="arrival-memory" :class="{ 'animate-stamp': effects }" :style="{ '--ink': selected.color }"><v-icon :icon="selected.icon" size="30"/><span>{{ selected.stamp }}</span><strong>{{ selected.month }}</strong></div>
           <p class="trip-location-text">{{ selected?.places || '收藏旅行中到访过的地方。' }}</p>
@@ -48,6 +48,7 @@
           <p class="route-note">仅展示到访地区，不代表先后顺序或实际路线。详细日期待补充。</p>
           </template>
         </div>
+        <aside ref="journeyMapHost" v-show="journeySplit" class="journey-map-host" aria-label="随游记展开的足迹" />
         <footer v-if="!selectedDays.length" class="trip-dialog-footer"><span>{{ activePlace || '点击地区查看名称' }}</span><div><v-btn icon="mdi-minus" size="small" variant="text" aria-label="缩小地图" @click="tripMap?.zoomOut()"/><v-btn size="small" variant="text" @click="tripMap?.resetView()">重置</v-btn><v-btn icon="mdi-plus" size="small" variant="text" aria-label="放大地图" @click="tripMap?.zoomIn()"/></div></footer>
       </v-card>
     </v-dialog>
@@ -62,6 +63,8 @@ const DailyJourney = defineAsyncComponent(() => import('./DailyJourney.vue'))
 
 const effects = ref(true)
 const dialog = ref(false)
+const journeySplit = ref(false)
+const journeyMapHost = ref(null)
 const selected = ref(null)
 const trips = ref([])
 const passportLoading = ref(true)
@@ -73,7 +76,7 @@ const allPrefectures = computed(() => [...new Set(trips.value.flatMap(trip => tr
 const articles = ref([])
 const articlesLoading = ref(true)
 const articlesError = ref(false)
-function openTrip(trip) { selected.value = trip; activePlace.value = ''; dialog.value = true }
+function openTrip(trip) { journeySplit.value = false; selected.value = trip; activePlace.value = ''; dialog.value = true }
 async function loadPassport() {
   passportLoading.value = true
   passportError.value = false
@@ -155,7 +158,9 @@ onMounted(loadPassport)
 .passport-dialog { display:flex; flex-direction:column; max-height:calc(100dvh - 48px); background:#253340eF !important; color:#f4f3ea !important; border:1px solid #fff4; border-radius:26px !important; backdrop-filter:blur(24px); }
 .trip-dialog-header,.trip-dialog-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px; flex-shrink:0; }
 .trip-dialog-header h2 { font-size:23px; font-weight:500; margin-top:5px; }
-.trip-dialog-body { overflow-y:auto; padding:0 24px 16px; }
+.trip-dialog-body { min-height:0; overflow-anchor:none; overflow-y:auto; padding:0 24px 16px; }
+.journey-split .trip-dialog-body { margin-right:41%; }
+.journey-map-host { position:absolute; right:24px; top:104px; bottom:24px; width:calc(41% - 24px); color:#304b48; background:#f4f1e7; border-radius:18px; padding:16px; overflow:hidden; }
 .arrival-memory { display:flex; align-items:center; justify-content:center; gap:14px; background:#eeeade; color:var(--ink); border:4px double var(--ink); padding:15px; margin:10px 0 20px; font:13px Georgia,serif; }
 .animate-stamp { animation:stamp-arrival .4s ease-out; }
 @keyframes stamp-arrival { from { opacity:0; transform:scale(1.12) rotate(-4deg); } to { opacity:1; transform:scale(1) rotate(0); } }

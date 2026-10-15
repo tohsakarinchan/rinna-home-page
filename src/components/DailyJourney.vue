@@ -32,11 +32,11 @@
         </div>
       </article>
     </Teleport>
-    <p v-if="tilesLoading && !tileError" class="map-error" role="status">正在加载地图底图，正文和站点可先阅读…</p><p v-if="tileError" class="map-error" role="status">地图底图暂时无法加载；站点与游记仍可阅读。<button @click="retryTiles">重新加载底图</button></p>
+    <p v-if="tileError" class="map-error" role="status">地图底图暂时无法加载；站点与游记仍可阅读。<button @click="retryTiles">重新加载底图</button></p>
     <p class="map-caption">编号按你提供的顺序排列。虚线仅连接站点，不代表实际道路或乘车路线；金色标记为待确认地点。</p>
     <div class="day-stops" aria-label="当日停靠点"><button v-for="(stop, index) in day.stops" :key="stop.id" :class="{ chosen: active === stop.id, provisional: stop.provisional }" :aria-pressed="active === stop.id" @click="focusStop(stop)"><b>{{ String(index + 1).padStart(2, '0') }}</b><span>{{ stop.name }}<small>{{ stop.category }}{{ stop.provisional ? ' · 待确认' : '' }}</small></span></button></div>
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
-    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><JourneyImage :src="photo.url" :alt="photo.alt" @load="queueReading" /><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
+    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><a :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
     <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span></footer>
     <nav class="bottom-pager" aria-label="正文底部翻页">
@@ -50,7 +50,6 @@
 <script setup>
 import { computed, ref, reactive, shallowRef, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import L from 'leaflet'
-import JourneyImage from './JourneyImage.vue'
 import { cityStops } from '../constants/journey-stories'
 import { chapterStops, routePrefix } from '../utils/journey-progress'
 import 'leaflet/dist/leaflet.css'
@@ -65,8 +64,6 @@ const mapEl = ref(null)
 const active = ref('')
 const selectedStop = computed(() => day.value.stops.find(s => s.id === active.value))
 const tileError = ref(false)
-const tilesLoading = ref(false)
-let tileRetryTimer, tileRetries = 0
 const previewStop = ref(null)
 const previewIndex = computed(() => day.value.stops.findIndex(s => s.id === previewStop.value?.id))
 const popupHost = shallowRef(null)
@@ -164,12 +161,7 @@ function turn(delta) {
   if (next < 0 || next >= days.value.length) { emit('boundary', delta); return }
   page.value = next
 }
-function retryTiles() {
-  clearTimeout(tileRetryTimer); tileRetryTimer = null
-  tileError.value = false
-  tiles?.redraw()
-}
-function recoverMap() { if (tileError.value) { tileRetries = 0; retryTiles() } }
+function retryTiles() { tileError.value = false; tiles?.redraw() }
 function gateMapWheel(event) {
   // Capture before Leaflet's wheel listener: ordinary scrolling stays with the page.
   // Let popup content scroll normally and leave browser zoom shortcuts outside the map alone.
@@ -204,16 +196,8 @@ onMounted(() => {
   map.on('popupclose', () => { cancelClose(); active.value = ''; previewStop.value = null })
   map.on('click', closeCard)
   map.on('dragstart zoomstart', () => { if (!active.value) closeCard() })
-  tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, updateWhenIdle: true, updateWhenZooming: false, keepBuffer: 2, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })
-  tiles.on('loading', () => { tilesLoading.value = true })
-  tiles.on('load', () => { tilesLoading.value = false })
-  tiles.on('tileerror', () => {
-    tileError.value = true
-    if (tileRetries < 2 && !tileRetryTimer && navigator.onLine) {
-      tileRetryTimer = setTimeout(() => { tileRetryTimer = null; tileRetries++; retryTiles() }, 2500 * (tileRetries + 1))
-    }
-  }).addTo(map)
-  window.addEventListener('online', recoverMap)
+  tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' })
+  tiles.on('tileerror', () => { tileError.value = true }).addTo(map)
   layers = L.layerGroup().addTo(map)
   renderDay()
   let firstResize = true
@@ -235,7 +219,6 @@ onMounted(() => {
   queueReading()
 })
 onBeforeUnmount(() => {
-  clearTimeout(tileRetryTimer); window.removeEventListener('online', recoverMap)
   cancelClose()
   stopMotion()
   motionQuery?.removeEventListener('change', updateMotionPreference)
@@ -249,14 +232,14 @@ onBeforeUnmount(() => {
   observer?.disconnect()
   map?.remove()
 })
-
+const failedPhotos = reactive(new Set())
 function photosForChapter(index) {
   const chapter = day.value.journal[index]
   const candidates = chapter.photos?.length ? chapter.photos : (chapterRoutes.value[index] || []).flatMap(i => {
     const stop = day.value.stops[i]
     return stop.photo?.url ? [{ ...stop.photo, alt: stop.photo.alt || stop.name }] : []
   })
-  return candidates.filter((photo, i) => candidates.findIndex(p => p.url === photo.url) === i)
+  return candidates.filter((photo, i) => !failedPhotos.has(photo.url) && candidates.findIndex(p => p.url === photo.url) === i)
 }
 const readingMapEl = ref(null)
 const reducedMotion = ref(false)
@@ -494,6 +477,5 @@ button:focus-visible { outline:3px solid #58a7af; outline-offset:3px; }
 .place-card a:focus-visible { outline:2px solid #58a7af; outline-offset:2px; }
 @media(max-width:600px) { .daily-journey { padding:16px 12px; } .day-stops { grid-template-columns:repeat(2,minmax(0,1fr)); } .day-title h2 { font-size:26px; } .day-end { flex-direction:column; } }
 </style>
-
 
 

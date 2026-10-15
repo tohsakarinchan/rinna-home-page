@@ -11,8 +11,8 @@
     <div ref="mapSlot" class="map-slot" :style="docked ? { height: slotHeight + 'px' } : {}">
       <Teleport :to="mapHost || 'body'" :disabled="!docked || !mapHost">
         <div ref="readingMapEl" class="reading-map" :class="{ docked, 'motion-off': !motionAllowed }">
-          <div v-if="docked" class="reading-map-heading"><span>沿着文字，重访这一天</span><Transition name="reading-label" mode="out-in"><strong :key="readingLabel">{{ readingLabel }}</strong></Transition><button v-if="!following" @click="resumeFollowing">继续跟随游记 ↗</button><small v-else>地图随正文推进 · 可拖动自由查看</small></div>
-    <div ref="mapEl" class="street-map" role="region" tabindex="0" aria-label="当日街道地图，可用加减键缩放和方向键移动" @keydown.esc.stop="closeCard"/>
+          <div v-if="docked" class="reading-map-heading"><span>沿着文字，重访这一天</span><Transition name="reading-label" mode="out-in"><strong :key="readingLabel">{{ readingLabel }}</strong></Transition><small>本段地图固定 · 点击站点查看详情</small></div>
+    <div ref="mapEl" class="street-map" role="region" tabindex="0" :aria-label="docked ? '本段街道地图，视野固定，可点击站点查看详情' : '当日街道地图，可用加减键缩放和方向键移动'" @keydown.esc.stop="closeCard"/>
           <p v-if="docked" class="reading-map-caption">虚线为站点连接示意，非实际交通路线。金色地点待确认。</p>
         </div>
       </Teleport>
@@ -53,7 +53,7 @@ import L from 'leaflet'
 import { cityStops } from '../constants/journey-stories'
 import { chapterStops, routePrefix } from '../utils/journey-progress'
 import 'leaflet/dist/leaflet.css'
-const props = defineProps({ days: { type: Array, required: true }, initialPage: { type: Number, default: 0 }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true } })
+const props = defineProps({ days: { type: Array, required: true }, initialPage: { type: Number, default: 0 }, mapHost: { default: null }, motionEnabled: { type: Boolean, default: true }, active: { type: Boolean, default: true } })
 const emit = defineEmits(['layout', 'boundary'])
 const days = computed(() => props.days.map(d => ({ ...d, stops: cityStops(d.stops) })).sort((a, b) => a.date.localeCompare(b.date)))
 const page = ref(Math.max(0, Math.min(props.initialPage, days.value.length - 1)))
@@ -95,7 +95,7 @@ async function showCard(stop, pinned = false) {
   if (previewStop.value?.id !== stop.id) photoFailed.value = false
   previewStop.value = stop
   if (pinned) active.value = stop.id
-  popup.options.autoPan = pinned
+  popup.options.autoPan = pinned && !docked.value
   popup.options.offset = L.point(0, -12)
   popup.setLatLng(stop.geo).setContent(popupHost.value).openOn(map)
   await nextTick()
@@ -104,7 +104,7 @@ async function showCard(stop, pinned = false) {
   const element = popup.getElement()
   element?.classList.remove('preview-shifted')
   // Keep hover previews inside the map without panning the marker away from the pointer.
-  if (!pinned && element) {
+  if ((!pinned || docked.value) && element) {
     const bounds = mapEl.value.getBoundingClientRect()
     const card = element.getBoundingClientRect()
     let dx = Math.max(bounds.left + 10 - card.left, Math.min(0, bounds.right - 10 - card.right))
@@ -125,18 +125,18 @@ function fit(includeArrival) {
 
   closeCard()
   if (!map) return
+  if (docked.value) { fitReadingSegment(); return }
   map.closePopup()
   const stops = day.value.stops.filter(s => Array.isArray(s.geo))
   if (stops.length) map.fitBounds(L.latLngBounds(stops.map(s => s.geo)), { padding: [35, 35], maxZoom: 14, animate: false })
   else map.setView([36.2, 138.2], 5, { animate: false })
 }
 function focusStop(stop) {
-  if (docked.value) following.value = false
   cancelClose()
   active.value = stop.id
-  map?.setView(stop.geo, stop.zoom || 16, { animate: false })
+  if (!docked.value) map?.setView(stop.geo, stop.zoom || 16, { animate: false })
   showCard(stop, true)
-  mapEl.value?.scrollIntoView({ behavior: 'instant', block: 'nearest' })
+  if (!docked.value) mapEl.value?.scrollIntoView({ behavior: 'instant', block: 'nearest' })
 }
 function renderDay() {
   stopMotion()
@@ -165,11 +165,10 @@ function retryTiles() { tileError.value = false; tiles?.redraw() }
 function gateMapWheel(event) {
   // Capture before Leaflet's wheel listener: ordinary scrolling stays with the page.
   // Let popup content scroll normally and leave browser zoom shortcuts outside the map alone.
-  if (!event.ctrlKey || event.target.closest('.leaflet-popup, .leaflet-control')) {
+  if (docked.value || !event.ctrlKey || event.target.closest('.leaflet-popup, .leaflet-control')) {
     event.stopImmediatePropagation()
     return
   }
-  pauseFollowing()
   event.preventDefault()
 }
 watch(page, async (current, previous) => {
@@ -188,7 +187,7 @@ onMounted(() => {
     keyboard: true, zoomAnimation: false, fadeAnimation: false,
     zoomControl: false,
   })
-  L.control.zoom({ zoomInTitle: '放大地图（+）', zoomOutTitle: '缩小地图（−）' }).addTo(map)
+  zoomControl = L.control.zoom({ zoomInTitle: '放大地图（+）', zoomOutTitle: '缩小地图（−）' }).addTo(map)
   popupHost.value = document.createElement('div')
   L.DomEvent.disableClickPropagation(popupHost.value)
   L.DomEvent.disableScrollPropagation(popupHost.value)
@@ -202,10 +201,13 @@ onMounted(() => {
   renderDay()
   let firstResize = true
   observer = new ResizeObserver(() => {
+    if (!props.active || changingLayout) return
     mapEl.value.style.setProperty('--place-card-width', `${Math.max(160, mapEl.value.clientWidth - 28)}px`)
-    map.invalidateSize()
-    if (firstResize) { fit(false); firstResize = false }
-    else if (previewStop.value) showCard(previewStop.value, !!active.value)
+    map.invalidateSize({ pan: false })
+    if (docked.value) fitReadingSegment()
+    else if (firstResize) fit(false)
+    firstResize = false
+    if (previewStop.value) showCard(previewStop.value, !!active.value)
   })
   observer.observe(mapEl.value)
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -214,8 +216,6 @@ onMounted(() => {
   scrollRoot = journeyEl.value.closest('.trip-dialog-body')
   scrollRoot?.addEventListener('scroll', queueReading, { passive: true })
   window.addEventListener('resize', queueReading)
-  mapEl.value.addEventListener('pointerdown', pauseFollowing)
-  mapEl.value.addEventListener('keydown', pauseFollowing)
   queueReading()
 })
 onBeforeUnmount(() => {
@@ -225,8 +225,6 @@ onBeforeUnmount(() => {
   cancelAnimationFrame(readingFrame)
   scrollRoot?.removeEventListener('scroll', queueReading)
   window.removeEventListener('resize', queueReading)
-  mapEl.value?.removeEventListener('pointerdown', pauseFollowing)
-  mapEl.value?.removeEventListener('keydown', pauseFollowing)
   emit('layout', false)
   mapEl.value?.removeEventListener('wheel', gateMapWheel, true)
   observer?.disconnect()
@@ -291,18 +289,33 @@ const journeyEl = ref(null)
 const mapSlot = ref(null)
 const docked = ref(false)
 const slotHeight = ref(0)
-const following = ref(true)
 const readingChapter = ref(-1)
 const chapterRoutes = computed(() => chapterStops(day.value))
 const readingLabel = computed(() => {
   const indices = chapterRoutes.value[readingChapter.value] || []
   return indices.length ? indices.map(i => day.value.stops[i].name).join(' → ') : '这一日的足迹'
 })
-let scrollRoot, readingFrame, changingLayout = false, lastRoute = '__reset__'
-function pauseFollowing() { if (docked.value) { following.value = false; stopMotion() } }
-function resumeFollowing() { following.value = true; lastRoute = '__reset__'; updateReadingMap() }
+let scrollRoot, readingFrame, zoomControl, changingLayout = false, lastRoute = '__reset__', lastSegment = null
+function setMapInteraction() {
+  for (const name of ['dragging', 'scrollWheelZoom', 'doubleClickZoom', 'touchZoom', 'boxZoom', 'keyboard']) {
+    map[name]?.[docked.value ? 'disable' : 'enable']()
+  }
+  if (docked.value) zoomControl.remove()
+  else zoomControl.addTo(map)
+  markers.forEach(marker => { marker.options.autoPanOnFocus = !docked.value })
+}
+function fitReadingSegment() {
+  if (!map || !docked.value) return
+  const indices = chapterRoutes.value[readingChapter.value] || []
+  const key = indices.join(',')
+  // Unmapped paragraphs retain the last segment instead of returning to the whole day.
+  if (!indices.length && lastSegment !== null) return
+  const points = (indices.length ? indices.map(i => day.value.stops[i]) : day.value.stops).map(s => s.geo)
+  if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [42, 42], maxZoom: 14, animate: false })
+  lastSegment = key
+}
 function updateReadingMap() {
-  if (!map || !docked.value || !following.value) return
+  if (!map || !docked.value) return
   const indices = chapterRoutes.value[readingChapter.value] || []
   const atEnd = readingChapter.value >= 0 && scrollRoot.scrollHeight - scrollRoot.scrollTop - scrollRoot.clientHeight < 28
   const key = atEnd ? '__end__' : indices.join(',')
@@ -317,26 +330,16 @@ function updateReadingMap() {
     element?.classList.toggle('reading-pin', indices.includes(i))
     element?.classList.toggle('future-pin', end >= 0 && i > end)
   })
-  const points = atEnd ? day.value.stops.map(s => s.geo) : indices.map(i => day.value.stops[i].geo)
   clearTimeout(cameraTimer)
-  map.stop()
-  const moveCamera = () => {
-    if (!docked.value || !following.value) return
-    if (points.length) {
-      const bounds = L.latLngBounds(points)
-      if (motionAllowed.value) map.flyToBounds(bounds, { padding: [42, 42], maxZoom: 14, duration: .65 })
-      else map.fitBounds(bounds, { padding: [42, 42], maxZoom: 14, animate: false })
-    } else fit(false)
-  }
-  if (motionAllowed.value) cameraTimer = setTimeout(moveCamera, 110)
-  else moveCamera()
+  if (indices.join(',') !== lastSegment) cameraTimer = setTimeout(fitReadingSegment, 180)
 }
 function queueReading() {
+  if (!props.active) return
   cancelAnimationFrame(readingFrame)
   readingFrame = requestAnimationFrame(syncReading)
 }
 async function syncReading() {
-  if (!scrollRoot || changingLayout || !mapSlot.value) return
+  if (!props.active || !scrollRoot || changingLayout || !mapSlot.value) return
   const top = scrollRoot.getBoundingClientRect().top
   const shouldDock = !!props.mapHost && window.innerWidth >= 1000 && mapSlot.value.getBoundingClientRect().bottom < top + (docked.value ? 64 : 0)
   if (shouldDock !== docked.value) {
@@ -348,6 +351,9 @@ async function syncReading() {
     const before = anchor.getBoundingClientRect().top
     if (shouldDock) slotHeight.value = mapSlot.value.offsetHeight
     docked.value = shouldDock
+    closeCard()
+    setMapInteraction()
+    lastSegment = null
     emit('layout', shouldDock)
     await nextTick()
     scrollRoot.scrollTop += anchor.getBoundingClientRect().top - before
@@ -356,7 +362,6 @@ async function syncReading() {
     animateElement(journeyEl.value, [{ transform: `translateX(${shift}px)`, opacity: .85 }, { transform: 'translateX(0)', opacity: 1 }])
     animateElement(readingMapEl.value, [{ opacity: 0, transform: 'translateY(12px)' }, { opacity: 1, transform: 'translateY(0)' }], 380)
     lastRoute = '__reset__'
-    following.value = true
     if (!shouldDock) {
       drawRoute(-1)
       baseLine?.setStyle({ opacity: .65 })
@@ -374,7 +379,22 @@ async function syncReading() {
   readingChapter.value = index
   updateReadingMap()
 }
-watch(page, () => { readingChapter.value = -1; lastRoute = '__reset__'; following.value = true; scrollRoot?.scrollTo({ top: 0 }); queueReading() })
+watch(page, () => { readingChapter.value = -1; lastRoute = '__reset__'; lastSegment = null; scrollRoot?.scrollTo({ top: 0 }); queueReading() })
+watch(() => props.initialPage, value => { page.value = Math.max(0, Math.min(value, days.value.length - 1)) })
+watch(() => props.active, async active => {
+  stopMotion()
+  cancelAnimationFrame(readingFrame)
+  if (!active) {
+    closeCard()
+    docked.value = false
+    setMapInteraction()
+    emit('layout', false)
+    return
+  }
+  await nextTick()
+  map?.invalidateSize({ pan: false })
+  queueReading()
+})
 </script>
 
 <style scoped>

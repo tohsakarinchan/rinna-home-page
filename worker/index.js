@@ -1,3 +1,4 @@
+import {handleMcp} from './mcp.js';
 import * as blogList from '../functions/api/blog-list.js';
 import * as blogPost from '../functions/api/blog-post.js';
 import * as passport from '../functions/api/passport.js';
@@ -6,6 +7,7 @@ const routes = {'/api/blog-list': blogList, '/api/blog-post': blogPost, '/api/pa
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/mcp') return handleMcp(request);
     const route = routes[url.pathname];
     if (route) {
       const handler = route.onRequest || route['onRequest' + request.method[0] + request.method.slice(1).toLowerCase()];

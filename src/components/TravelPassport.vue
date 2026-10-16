@@ -39,7 +39,8 @@
       <v-card class="passport-dialog" :class="{ 'journey-split': journeySplit }">
         <header class="trip-dialog-header"><div><span class="eyebrow">{{ selected ? `JOURNEY / ${selected.month}` : 'ALL JOURNEYS / JAPAN' }}</span><h2>{{ selected?.title || '我的日本足迹' }}</h2></div><v-btn icon="mdi-close" aria-label="关闭旅行" variant="text" @click="dialog = false"/></header>
         <div class="trip-dialog-body">
-          <DailyJourney v-if="dialog && selectedDays.length" :key="selected.id" :days="selectedDays" :trip-id="selected.id" :story="selected.story" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
+          <DailyJourney v-if="dialog && selectedDays.length && !showOverview" :key="selected.id" :days="selectedDays" :trip-id="selected.id" :story="selected.story" :map-host="journeyMapHost" :motion-enabled="effects" @layout="journeySplit = $event" />
+          <TripOverview v-else-if="dialog && selected" :trip="selected" @begin="beginStory"/>
           <template v-else>
           <div v-if="selected" class="arrival-memory" :class="{ 'animate-stamp': effects }" :style="{ '--ink': selected.color }"><v-icon :icon="selected.icon" size="30"/><span>{{ selected.stamp }}</span><strong>{{ selected.month }}</strong></div>
           <p class="trip-location-text">{{ selected?.places || '收藏旅行中到访过的地方。' }}</p>
@@ -49,15 +50,16 @@
           </template>
         </div>
         <aside ref="journeyMapHost" v-show="journeySplit" class="journey-map-host" aria-label="随游记展开的足迹" />
-        <footer v-if="!selectedDays.length" class="trip-dialog-footer"><span>{{ activePlace || '点击地区查看名称' }}</span><div><v-btn icon="mdi-minus" size="small" variant="text" aria-label="缩小地图" @click="tripMap?.zoomOut()"/><v-btn size="small" variant="text" @click="tripMap?.resetView()">重置</v-btn><v-btn icon="mdi-plus" size="small" variant="text" aria-label="放大地图" @click="tripMap?.zoomIn()"/></div></footer>
+        <footer v-if="!selected" class="trip-dialog-footer"><span>{{ activePlace || '点击地区查看名称' }}</span><div><v-btn icon="mdi-minus" size="small" variant="text" aria-label="缩小地图" @click="tripMap?.zoomOut()"/><v-btn size="small" variant="text" @click="tripMap?.resetView()">重置</v-btn><v-btn icon="mdi-plus" size="small" variant="text" aria-label="放大地图" @click="tripMap?.zoomIn()"/></div></footer>
       </v-card>
     </v-dialog>
   </section>
 </template>
 
 <script setup>
-import { ref, onMounted, computed, defineAsyncComponent } from 'vue'
+import { ref, onMounted, computed, defineAsyncComponent, nextTick } from 'vue'
 import JapanPrefectureMap from './JapanPrefectureMap.vue'
+import TripOverview from './TripOverview.vue'
 import { fetchPostPage, fetchJson } from '../utils/api'
 const DailyJourney = defineAsyncComponent(() => import('./JourneyStory.vue'))
 
@@ -65,6 +67,7 @@ const DailyJourney = defineAsyncComponent(() => import('./JourneyStory.vue'))
 const showStandaloneJournal = false
 const effects = ref(true)
 const dialog = ref(false)
+const showOverview = ref(true)
 const journeySplit = ref(false)
 const journeyMapHost = ref(null)
 const selected = ref(null)
@@ -78,7 +81,8 @@ const allPrefectures = computed(() => [...new Set(trips.value.flatMap(trip => tr
 const articles = ref([])
 const articlesLoading = ref(true)
 const articlesError = ref(false)
-function openTrip(trip) { journeySplit.value = false; selected.value = trip; activePlace.value = ''; dialog.value = true }
+function openTrip(trip) { showOverview.value = true; journeySplit.value = false; selected.value = trip; activePlace.value = ''; dialog.value = true }
+async function beginStory() { showOverview.value = false; await nextTick(); document.querySelector('.trip-dialog-body')?.scrollTo({ top: 0 }) }
 async function loadPassport() {
   passportLoading.value = true
   passportError.value = false

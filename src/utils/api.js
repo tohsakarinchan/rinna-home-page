@@ -1,6 +1,11 @@
-export async function fetchJson(url) {
-    const response = await fetch(url, { signal: AbortSignal.timeout(30000) })
-    if (!response.ok) throw new Error(`Request failed (${response.status})`)
+export async function fetchJson(url, { signal } = {}) {
+    const timeout = AbortSignal.timeout(30000)
+    const response = await fetch(url, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout })
+    if (!response.ok) {
+        const error = new Error(`Request failed (${response.status})`)
+        error.status = response.status
+        throw error
+    }
     const data = await response.json()
     if (!data || typeof data !== 'object' || data.error) throw new Error('Invalid API response')
     return data

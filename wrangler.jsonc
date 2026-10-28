@@ -3,5 +3,5 @@
   "compatibility_date": "2025-10-10",
   // Cloudflare Pages 项目配置
   // functions/ 目录下的文件会被自动识别为 Pages Functions (serverless API)
-  "pages_build_output_dir": "./dist"
+  "pages_build_output_dir": "./dist/client"
 }

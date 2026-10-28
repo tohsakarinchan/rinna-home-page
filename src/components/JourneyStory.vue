@@ -30,7 +30,7 @@ const firstDay = computed(() => [...props.days].sort((a, b) => a.date.localeComp
 let savedScroll = 0
 const bookend = computed(() => config.value[chapter.value] || { title: chapter.value === 'prologue' ? '出发之前' : '旅程之后' })
 let destination = 'days', query, chapterAnimation
-watch([chapter, flight], async () => {
+watch([chapter, flight, () => props.motionEnabled, reduced], async () => {
   chapterAnimation?.cancel()
   await nextTick()
   if (flight.value || !props.motionEnabled || reduced.value) return

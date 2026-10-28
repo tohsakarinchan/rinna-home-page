@@ -1,10 +1,6 @@
 <template>
 	<div class="home-content">
 		<div>
-			<div :style="xs || sm ? { 'display': 'none' } : { 'font-size': '4rem' }" class="leleo-left-welcome">{{
-				configdata.welcometitle }}</div>
-		</div>
-		<div>
 			<v-row align="center" justify="end">
 				<v-col v-if="xs || sm" cols="12">
 					<!-- 手机端搜索区域 -->
@@ -55,19 +51,10 @@
 					</div>
 				</v-col>
 
-				<v-col cols="12" md="4" align="center">
-					<v-card class="ma-3 clock-card" hover>
-						<template v-slot:title>
-							<span class="leleo-card-title clock-font">{{ formattedTime }}</span>
-						</template>
-						<template v-slot:subtitle>
-							<span style="font-weight: bold;">{{ formattedDate }}</span>
-						</template>
-					</v-card>
-				</v-col>
+
 			</v-row>
 
-			<travel-passport />
+			<travel-passport @dialog-change="$emit('travel-open', $event)" />
 		</div>
 	</div>
 </template>
@@ -77,6 +64,7 @@ import TravelPassport from '../components/TravelPassport.vue';
 import { useDisplay } from 'vuetify'
 
 export default {
+	emits: ['travel-open'],
 	components: {
 		TravelPassport
 	},

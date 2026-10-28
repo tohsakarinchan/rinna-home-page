@@ -8,7 +8,7 @@
     "dev:api": "node scripts/dev-api.mjs",
     "test": "node --test tests/*.test.js",
     "build": "vite build --outDir dist/client && node scripts/build-sites.mjs",
-    "preview": "vite preview",
+    "preview": "vite preview --outDir dist/client",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
@@ -22,6 +22,7 @@
     "less": "^4.2.0",
     "marked": "^17.0.5",
     "notion-to-md": "^3.1.9",
+    "three": "^0.186.1",
     "typeit": "^8.8.7",
     "vue": "^3.5.12",
     "vue-chartjs": "^5.3.2",

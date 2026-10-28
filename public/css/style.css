@@ -22,17 +22,18 @@
 
 /* 设置滚动条样式 */
 ::-webkit-scrollbar {
-    width: 0px;
+    width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background-color: var(--main_text_color, #000000);
+    background-color: #748b88;
     border-radius: 8px;
     height: 20%;
 }
 
 ::-webkit-scrollbar-track {
-    background-color: var(--main_bg_color, linear-gradient(50deg, #a2d0ff, #ffffff));
+    background-color: #263b4322;
 }
 
 body {
@@ -48,3 +49,4 @@ body {
 .v-card-item{
     padding: 0.2rem 1rem!important;
 }
+.home-shell, .trip-dialog-body, .v-overlay .v-card { scrollbar-width:thin; scrollbar-color:#81958f #263b4322; scrollbar-gutter:stable; }

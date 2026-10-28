@@ -15,13 +15,13 @@ export function notionClient(token, fetcher = fetch) {
     return response.json()
   }
 }
-export async function queryPages(request, id, published = false) {
+export async function queryPages(request, id, published = false, relationFilter = null) {
   const pages = []
   let cursor
   do {
     const data = await request(`databases/${id}/query`, 'POST', {
       page_size: 100, ...(cursor ? { start_cursor: cursor } : {}),
-      ...(published ? { filter: { property: 'Published', checkbox: { equals: true } } } : {}),
+      ...((published || relationFilter) ? { filter: relationFilter ? { and: [...(published ? [{ property: 'Published', checkbox: { equals: true } }] : []), relationFilter] } : { property: 'Published', checkbox: { equals: true } } } : {}),
     })
     pages.push(...data.results)
     cursor = data.has_more ? data.next_cursor : null
@@ -88,9 +88,25 @@ export async function passportResponse(request, env, ids) {
   try {
     const query = notionClient(env.NOTION_TOKEN)
     // Sequential batches stay within Notion's request rate and use no persistent process state.
-    const data = {}
-    for (const kind of ['trips', 'days', 'stops', 'chapters']) data[kind] = await queryPages(query, ids[kind], true)
-    data.places = await queryPages(query, env.NOTION_PLACES_DATABASE_ID)
+    const params = new URL(request.url).searchParams;
+    const summary = params.get('view') === 'summary';
+    const tripId = params.get('trip');
+    const data = { days: [], stops: [], chapters: [] };
+    data.trips = await queryPages(query, ids.trips, true);
+    if (tripId) {
+      data.trips = data.trips.filter(trip => trip.id === tripId);
+      if (!data.trips.length) return Response.json({ error: 'Trip not found' }, { status: 404 });
+    }
+    if (!summary && data.trips.length) {
+      data.days = await queryPages(query, ids.days, true, tripId ? { property: 'Trip', relation: { contains: tripId } } : null);
+      for (const kind of ['stops', 'chapters']) {
+        if (!tripId) data[kind] = await queryPages(query, ids[kind], true);
+        else for (let i = 0; i < data.days.length; i += 90) {
+          data[kind].push(...await queryPages(query, ids[kind], true, { or: data.days.slice(i, i + 90).map(day => ({ property: 'Day', relation: { contains: day.id } })) }));
+        }
+      }
+    }
+    data.places = await queryPages(query, env.NOTION_PLACES_DATABASE_ID);
     return Response.json(assemblePassport(data), { headers: { 'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120' } })
   } catch {
     return Response.json({ error: 'Unable to load travel content' }, { status: 502, headers: { 'Cache-Control': 'no-store' } })

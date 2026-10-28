@@ -1,11 +1,15 @@
+import {handleMcp} from './mcp.js';
 import * as blogList from '../functions/api/blog-list.js';
 import * as blogPost from '../functions/api/blog-post.js';
 import * as passport from '../functions/api/passport.js';
 import * as visitData from '../functions/api/visit-data.js';
-const routes = {'/api/blog-list': blogList, '/api/blog-post': blogPost, '/api/passport': passport, '/api/visit-data': visitData};
+import * as notionCover from '../functions/api/notion-cover.js';
+import * as notionImage from '../functions/api/notion-image.js';
+const routes = {'/api/notion-cover': notionCover, '/api/notion-image': notionImage, '/api/blog-list': blogList, '/api/blog-post': blogPost, '/api/passport': passport, '/api/visit-data': visitData};
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === '/mcp') return handleMcp(request);
     const route = routes[url.pathname];
     if (route) {
       const handler = route.onRequest || route['onRequest' + request.method[0] + request.method.slice(1).toLowerCase()];

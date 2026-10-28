@@ -4,3 +4,7 @@ dist/
 .dev.vars
 .sites-runtime/
 photo-review/
+.vercel/
+outputs/
+.vercel/
+outputs/

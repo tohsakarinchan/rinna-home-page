@@ -69,12 +69,6 @@ const config = {
 		"生命太短，没有时间留给遗憾，若不是终点，请微笑一直向前。"
 	],
 
-	//音乐播放配置，采用MetingJS Api(https://github.com/metowolf/MetingJS)
-	musicPlayer: {
-		server: 'netease',  //服务提供商 --网易云音乐
-		type: 'playlist',   //歌单类型
-		id: '2028178887'  //歌单id ---> music.163.com/#/playlist?id=2028178887
-	},
 
 	//壁纸数据 -----可以将壁纸文件上传到图床获取网络直链。若想调用api，请前往脚本自行修改逻辑
 	wallpaper: {

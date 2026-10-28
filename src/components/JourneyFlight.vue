@@ -17,14 +17,15 @@
   </section>
 </template>
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import JourneyCity from './JourneyCity.vue'
 import JourneyAircraft from './JourneyAircraft.vue'
 const props = defineProps({ flight: { type: Object, required: true }, motion: Boolean })
 const emit = defineEmits(['done'])
 const continueButton = ref(null)
 let timer
-onMounted(() => { continueButton.value?.focus({ preventScroll: true }); if (props.motion) timer = setTimeout(() => emit('done'), 6500) })
+onMounted(() => { continueButton.value?.focus({ preventScroll: true }) })
+watch(() => props.motion, enabled => { clearTimeout(timer); if (enabled) timer = setTimeout(() => emit('done'), 6500) }, { immediate: true })
 onBeforeUnmount(() => clearTimeout(timer))
 </script>
 <style scoped>

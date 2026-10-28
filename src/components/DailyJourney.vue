@@ -311,7 +311,18 @@ function fitReadingSegment() {
   // Unmapped paragraphs retain the last segment instead of returning to the whole day.
   if (!indices.length && lastSegment !== null) return
   const points = (indices.length ? indices.map(i => day.value.stops[i]) : day.value.stops).map(s => s.geo)
-  if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [42, 42], maxZoom: 14, animate: false })
+  if (points.length) {
+    const size = map.getSize()
+    // Fit the segment into roughly 70% of the viewport, with room for marker icons.
+    // A single location keeps street context; nearby distinct locations may zoom closer.
+    const bounds = L.latLngBounds(points)
+    const singleLocation = bounds.getSouthWest().equals(bounds.getNorthEast())
+    map.fitBounds(bounds, {
+      padding: [Math.max(32, size.x * .15), Math.max(32, size.y * .15)],
+      maxZoom: singleLocation ? 17 : 18,
+      animate: false,
+    })
+  }
   lastSegment = key
 }
 function updateReadingMap() {

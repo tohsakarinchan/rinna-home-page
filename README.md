@@ -1,5 +1,15 @@
 # leleo-home-page 个人主页
 
+当前工作区在此个人主页基础上包含博客、Notion 旅行护照及游记功能。保留上游名称与演示资料；演示地址不代表本项目当前生产地址。
+
+## 项目文档入口
+
+- 按任务定位资料：[PROJECT_INDEX.md](PROJECT_INDEX.md)，它是条件路由，不是必读清单。
+- 协作与读写规则：[AGENTS.md](AGENTS.md)；接续工作：[当前状态](docs/context/NOW.md)。
+- 运行与维护细节：[操作手册](docs/context/RUNBOOK.md)；源码和部署关系：[项目映射](docs/context/MAP.md)。
+
+核验日期：2026-10-22；本次仅核对文档及选定配置，未运行应用或验证线上环境。下文部署教程、上游演示及配置示例保留作历史参考，其与当前构建和平台设置的适配待核实，见 [验证缺口](docs/context/RISKS.md)。
+
 ## 目录
 - [项目简介](#项目简介)
 - [功能特性](#功能特性)  
@@ -26,7 +36,7 @@
 - **响应式设计**：适配桌面、平板和手机等不同设备
 - **个人信息展示**：包括头像、个性标签、简介、技能等
 - **项目展示**：展示项目，包括项目描述、技术栈和链接  
-- **预览配置**：支持主题、背景壁纸预览（包括动、静态/PC、移动端壁纸设置）以及音乐播放配置
+- **预览配置**：支持主题、背景壁纸预览（包括动、静态/PC、移动端壁纸设置）；音乐功能已移除，动态效果可切换并遵循系统偏好
 - **在线部署配置**：支持vercel一键部署及使用vercel环境变量进行在线自定义配置
 
 ## 演示地址
@@ -45,36 +55,21 @@
 
 ### 本地运行
 
-1. 克隆仓库：
+在当前项目根目录操作，先准备 Node.js 和 npm。以下命令为使用说明，本次未执行。
 
-```bash
-git clone https://github.com/leleo886/leleo-home-page.git
-```
-
-2. 进入项目目录：
-
-```bash
-cd leleo-home-page
-```
-
-3. 安装依赖：
+1. 安装依赖：
 
 ```bash
 npm install
 ```
 
-4. 启动开发服务器：
+2. 启动开发服务器：
 
 ```bash
 npm run dev
 ```
 
-旅游日记本地调试还需在另一个终端运行 `npm run dev:api`（Node.js 22+）。
-该服务仅监听 `127.0.0.1:8788`，读取 `.env.local` 和 `.dev.vars`，后者优先。
-文章需要 `NOTION_TOKEN` 和 `NOTION_DATABASE_ID`；额外到访记录需要
-`NOTION_PLACES_DATABASE_ID` 和 `NOTION_VISITS_DATABASE_ID`，并将数据库共享给对应 Notion integration。
-未配置额外数据库时仍显示文章生成的足迹。Vercel 与 Cloudflare 部署都需要在各自平台设置这些变量。
-运行 `npm test` 检查分页、错误响应与两平台的到访记录结果。
+博客与旅行功能还需要本地 API 和服务端配置，前置条件、变量加载顺序及验证方法统一见 [操作手册](docs/context/RUNBOOK.md#本地开发)。测试与构建方法见 [测试与构建](docs/context/RUNBOOK.md#测试与构建)。
 
 ### Vercel在线部署
 

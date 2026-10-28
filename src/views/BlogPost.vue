@@ -13,6 +13,9 @@
                 <v-progress-circular indeterminate size="48"></v-progress-circular>
             </div>
 
+            <div v-else-if="error" role="alert" class="text-center py-16">
+                <p>{{ error }}</p><v-btn class="mt-4" @click="loadPost">重新加载</v-btn>
+            </div>
             <template v-else>
                 <v-img v-if="meta.cover" :src="meta.cover" height="380" cover rounded="lg" class="mb-6"></v-img>
 
@@ -68,13 +71,19 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { setMeta } from '../utils/common.js'
 import config from '../config.js'
+import { fetchJson } from '../utils/api.js'
 
 const route = useRoute()
 const loading = ref(true)
+const error = ref('')
+let controller, scrollFrame
+function queueHeading() {
+    if (!scrollFrame) scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; updateActiveHeading() })
+}
 const meta = ref({})
 const html = ref('')
 const postContent = ref(null)   // 正文容器的 ref
@@ -146,36 +155,36 @@ function updateActiveHeading() {
     updateProgress()
 }
 
-onMounted(async () => {
-    window.addEventListener('scroll', updateActiveHeading, { passive: true })
-
+async function loadPost() {
+    controller?.abort();
+    const current = controller = new AbortController();
+    loading.value = true; error.value = ''; toc.value = []; lightbox.value = false;
     try {
-        const res = await fetch(`/api/blog-post?slug=${route.params.slug}`)
-        const data = await res.json()
-        meta.value = data.meta
-        html.value = data.html
-
-        //文章加载完后设置 meta
-        setMeta(
-            meta.value.title,
-            meta.value.summary || meta.value.title,
-            meta.value.tags?.join(',') || '',
-            '/favicon.ico'
-        )
-
-        // 等 v-html 渲染完再操作 DOM
-        await nextTick()
-        setupImageClick()
-        buildToc()
+        const data = await fetchJson(`/api/blog-post?slug=${encodeURIComponent(route.params.slug)}`, { signal: current.signal });
+        if (current.signal.aborted) return;
+        if (!data.meta || typeof data.html !== 'string') throw new Error('Invalid article');
+        meta.value = data.meta;
+        html.value = data.html;
+        setMeta(meta.value.title, meta.value.summary || meta.value.title, meta.value.tags?.join(',') || '', '/favicon.ico');
+        loading.value = false;
+        await nextTick();
+        if (current.signal.aborted) return;
+        setupImageClick();
+        buildToc();
+        updateActiveHeading();
     } catch (e) {
-        console.error('加载失败', e)
-    } finally {
-        loading.value = false
+        if (current.signal.aborted) return;
+        error.value = e.status === 404 ? '文章不存在或尚未发布。' : '文章暂时无法加载，请稍后重试。';
+        loading.value = false;
     }
-})
+}
+onMounted(() => window.addEventListener('scroll', queueHeading, { passive: true }));
+watch(() => route.params.slug, loadPost, { immediate: true });
 
 onUnmounted(() => {
-    window.removeEventListener('scroll', updateActiveHeading)
+    controller?.abort()
+    cancelAnimationFrame(scrollFrame)
+    window.removeEventListener('scroll', queueHeading)
 
     // 还原回主页默认 meta
     setMeta(

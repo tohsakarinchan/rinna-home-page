@@ -36,7 +36,7 @@
     <p class="map-caption">编号按你提供的顺序排列。虚线仅连接站点，不代表实际道路或乘车路线；金色标记为待确认地点。</p>
     <div class="day-stops" aria-label="当日停靠点"><button v-for="(stop, index) in day.stops" :key="stop.id" :class="{ chosen: active === stop.id, provisional: stop.provisional }" :aria-pressed="active === stop.id" @click="focusStop(stop)"><b>{{ String(index + 1).padStart(2, '0') }}</b><span>{{ stop.name }}<small>{{ stop.category }}{{ stop.provisional ? ' · 待确认' : '' }}</small></span></button></div>
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
-    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><a :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
+    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><div v-if="failedPhotos.has(photo.url)" class="photo-unavailable" role="status"><p>照片暂时无法加载，文字仍可继续阅读。</p><button type="button" @click="failedPhotos.delete(photo.url)">重新加载照片</button></div><a v-else :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
     <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span></footer>
     <nav class="bottom-pager" aria-label="正文底部翻页">
@@ -237,7 +237,7 @@ function photosForChapter(index) {
     const stop = day.value.stops[i]
     return stop.photo?.url ? [{ ...stop.photo, alt: stop.photo.alt || stop.name }] : []
   })
-  return candidates.filter((photo, i) => !failedPhotos.has(photo.url) && candidates.findIndex(p => p.url === photo.url) === i)
+  return candidates.filter((photo, i) => candidates.findIndex(p => p.url === photo.url) === i)
 }
 const readingMapEl = ref(null)
 const reducedMotion = ref(false)
@@ -409,6 +409,7 @@ watch(() => props.active, async active => {
 </script>
 
 <style scoped>
+.photo-unavailable{min-height:180px;display:grid;place-content:center;gap:12px;padding:24px;text-align:center;background:#e8e6dc;color:#354b43}.photo-unavailable button{justify-self:center;min-height:44px;padding:8px 18px;border:1px solid currentColor;border-radius:24px}.photo-unavailable button:focus-visible{outline:2px solid #34594f;outline-offset:3px}
 .bottom-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:22px;padding-top:22px;border-top:1px solid #3a66522a}
 .bottom-pager button{display:flex;align-items:center;gap:12px;min-height:44px;padding:10px 18px;border:1px solid #345a4744;border-radius:28px;color:#304b48;background:transparent;font:inherit;font-size:13px;cursor:pointer;transition:background 160ms ease}
 .bottom-pager button:hover{background:#345a4710}.bottom-pager button:focus-visible{outline:2px solid #34594f;outline-offset:3px}.bottom-pager>span{font:12px Georgia,serif;color:#6d7b6d}

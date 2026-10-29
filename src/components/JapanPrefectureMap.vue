@@ -46,7 +46,7 @@
               </section>
             </Transition>
         </div>
-        <div v-if="geoError" class="map-error" role="alert">地图暂时无法加载。<button type="button" @click="initChart">重试</button></div>
+        <div v-if="geoError" class="map-error" role="alert">地图暂时无法加载。<button v-if="!compact" type="button" @click="initChart">重试</button></div>
         <p class="map-attribution">出典：地球地図日本（国土地理院）<template v-if="!compact"> · <a href="https://www.gsi.go.jp/kankyochiri/gm_jpn.html" target="_blank" rel="noopener noreferrer">地图来源</a></template></p>
         <div v-if="overview && landmarks.length" class="souvenir-caption">
             <span class="souvenir-kicker">MINIATURE MEMORIES / 到访纪念</span>
@@ -167,6 +167,7 @@ const miniatureMapStyle = computed(() => {
 let chart = null
 let resizeObserver
 let disposed = false
+let initializing = false
 let geoFeatures = []
 let overviewBounds
 const map_zoom = ref(2) // 初始与 DEFAULT_MAP_ZOOM 保持一致
@@ -284,6 +285,8 @@ function buildOption() {
             silent: props.compact || props.overview,
             roam: !props.compact && !props.overview,
             aspectScale: 0.9,
+            preserveAspect: 'contain',
+            preserveAspect: 'contain',
             ...(props.overview && overviewBounds ? { boundingCoords: overviewBounds, zoom: 1, top: 120, bottom: 36, left: 32, right: 32 } : {
                 center: props.compact ? [137.5, 37.5] : DEFAULT_MAP_CENTER,
                 zoom: props.compact ? 1.5 : DEFAULT_MAP_ZOOM,
@@ -362,6 +365,8 @@ function resetView() {
 defineExpose({ zoomIn, zoomOut, resetView, map_zoom })
 
 async function initChart() {
+    if (disposed || initializing) return
+    initializing = true
     geoLoading.value = true
     geoError.value = false
     try {
@@ -393,13 +398,28 @@ async function initChart() {
         console.error('地图加载失败', e)
         geoLoading.value = false
         geoError.value = true
+        chart?.dispose()
+        chart = null
+    } finally {
+        initializing = false
     }
+}
+
+function updateChart() {
+    updateOverviewBounds()
+    if (!chart) return
+    const view = getCurrentMapView()
+    const option = buildOption()
+    // Highlighting a prefecture must not undo the visitor's zoom or pan.
+    if (!props.overview) Object.assign(option.series[0], view)
+    chart.setOption(option)
+    positionLandmarks()
 }
 
 // 监听 props 变化，局部更新 series（不重新注册地图）
 watch(
     () => [props.visitedPrefectures, props.activePrefecture, props.landmarks],
-    () => { updateOverviewBounds(); chart?.setOption(buildOption()); positionLandmarks() },
+    updateChart,
     { deep: true }
 )
 

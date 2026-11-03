@@ -2,9 +2,9 @@
 
 ## 当前目标
 
-按用户参考图将旅行护照改为一次显示四张贴签（左右各两张），加入翻页动效、按钮、方向键与手机横滑翻页。本地代码与验证完成，实际观感及手机手感待用户验收；用户已于 2026-11-03 授权推送 GitHub 并发布 Sites，正在执行。
+按用户参考图将旅行护照改为一次显示四张贴签（左右各两张），加入翻页动效、按钮、方向键与手机横滑翻页。代码与验证完成，应用提交 `d2c360d` 已推送 GitHub main；Sites v13 于 2026-11-03 发布成功，原生工具返回状态 `succeeded`。实际观感及手机手感待用户验收。当前发布地址：https://rinna-homepage.yry20020409.chatgpt.site。
 
-此前发布记录：GitHub main 已推送应用提交 `442734a`，Sites v12 部署状态为 `succeeded`，公开地址：https://rinna-homepage.fine-rhino-5208.chatgpt.site。该发布不包含本轮翻页修改。
+此前发布记录：GitHub main 已推送应用提交 `442734a`，Sites v12 部署状态为 `succeeded`，公开地址：https://rinna-homepage.fine-rhino-5208.chatgpt.site。此为历史版本及地址；当前发布以上述 v13 结果为准。
 
 ## 进展与证据
 
@@ -36,4 +36,4 @@
 
 ## 阻塞与下一步
 
-本轮四张贴签翻页在本地完成，待用户查看桌面动效和手机横滑手感；GitHub 推送和 Sites 发布已获授权，结果待确认。此前 Sites v12 已发布成功。MDI 完整字型暂时保留以兼容配置/Notion 中的动态图示；都道府县地图已不依赖访客访问 GitHub；每日游记的 OpenStreetMap 瓦片仍为外部服务。生产凭证、缓存实际命中与后续部署结果待核实，见 [RISKS](RISKS.md)。
+本轮四张贴签翻页在本地完成，待用户查看桌面动效和手机横滑手感；应用提交 `d2c360d` 已推送 GitHub，Sites v13 已发布成功。发布结果由原生工具确认，未操作浏览器验收。MDI 完整字型暂时保留以兼容配置/Notion 中的动态图示；都道府县地图已不依赖访客访问 GitHub；每日游记的 OpenStreetMap 瓦片仍为外部服务。生产凭证、缓存实际命中与后续部署结果待核实，见 [RISKS](RISKS.md)。

@@ -13,7 +13,7 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
   const meta = ref({})
   const html = ref('')
   const postContent = ref(null)   // 正文容器的 ref
-  
+
   // 进度条
   const progress = ref(0)
   function updateProgress() {
@@ -21,13 +21,13 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
     const total = el.scrollHeight - el.clientHeight
     progress.value = total > 0 ? Math.min((el.scrollTop / total) * 100, 100) : 0
   }
-  
+
   // 图片放大
   const lightbox = ref(false)
   const lightboxSrc = ref('')
   let imageCleanups = []
   function clearImageClicks() { imageCleanups.forEach(cleanup => cleanup()); imageCleanups = [] }
-  
+
   function setupImageClick() {
     clearImageClicks()
     if (!postContent.value) return
@@ -39,11 +39,11 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
         imageCleanups.push(() => img.removeEventListener('click', open))
     })
   }
-  
+
   // 目录
   const toc = ref([])
   const activeHeading = ref('')
-  
+
   function buildToc() {
     if (!postContent.value) return
     const headings = postContent.value.querySelectorAll('h1, h2, h3')
@@ -58,14 +58,14 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
         }
     })
   }
-  
+
   function scrollToHeading(id) {
     const el = document.getElementById(id)
     if (el) {
         el.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
   }
-  
+
   // 滚动时高亮当前所在的目录项
   function updateActiveHeading() {
     if (!postContent.value) return
@@ -78,11 +78,11 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
         }
     })
     activeHeading.value = current
-  
+
     // 顺便更新进度条
     updateProgress()
   }
-  
+
   async function loadPost() {
     controller?.abort();
     clearImageClicks();
@@ -108,13 +108,13 @@ export function useBlogPost(slug, { getPost = fetchPost } = {}) {
   }
   onMounted(() => window.addEventListener('scroll', queueHeading, { passive: true }));
   watch(slug, loadPost, { immediate: true });
-  
+
   onUnmounted(() => {
     controller?.abort()
     clearImageClicks()
     cancelAnimationFrame(scrollFrame)
     window.removeEventListener('scroll', queueHeading)
-  
+
     // 还原回主页默认 meta
     setMeta(
         config.metaData.title,

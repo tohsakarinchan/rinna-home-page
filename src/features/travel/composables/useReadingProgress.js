@@ -152,5 +152,5 @@ export function useReadingProgress({ props, day, page, emit, runtime, L, reading
     get changingLayout() { return changingLayout },
     cancelCamera() { clearTimeout(cameraTimer) },
     resetRoute() { lastRoute = '__reset__' } }
-  
+
 }

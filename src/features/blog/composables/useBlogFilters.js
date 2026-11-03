@@ -9,7 +9,7 @@ export function useBlogFilters(posts) {
       posts.value.forEach(p => p.tags.forEach(t => set.add(t)))
       return [...set]
   })
-  
+
   const filteredPosts = computed(() => {
       let list = posts.value
       if (activeTag.value) {
@@ -26,16 +26,16 @@ export function useBlogFilters(posts) {
       }
       return list
   })
-  
+
   const activeTagNormalized = computed(() => normalizePrefectureTag(activeTag.value))
-  
+
   function isTagActive(tag) {
       if (activeTag.value === tag) return true
       const n = normalizePrefectureTag(tag)
       return Boolean(n && n === activeTagNormalized.value)
   }
-  
-  
+
+
   return { searchQuery, activeTag, allTags, filteredPosts, activeTagNormalized, isTagActive,
     highlight: text => highlightSearch(text, searchQuery.value) }
 }

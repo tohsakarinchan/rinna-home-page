@@ -19,4 +19,3 @@ function escapeHtml(str = '') {
 function escapeReg(str = '') {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
-

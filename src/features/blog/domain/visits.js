@@ -29,7 +29,7 @@ export function buildVisitSummary(mapPosts, notionVisitedPlaces, notionVisitReco
       })
       return [...set]
   })()
-  
+
   const firstVisitEntries = (() => {
       const firstVisit = new Map()
       mapPosts.forEach(post => {
@@ -53,13 +53,13 @@ export function buildVisitSummary(mapPosts, notionVisitedPlaces, notionVisitReco
       })
       return [...firstVisit.values()]
   })()
-  
+
   const visitRecords = (() => {
       return firstVisitEntries
           .sort((a, b) => a.ts - b.ts)
           .map(item => ({ name: item.name, ts: item.ts, firstVisitLabel: formatVisitDate(item.rawDate) }))
   })()
-  
-  
+
+
   return { visitedPrefectures, visitRecords }
 }

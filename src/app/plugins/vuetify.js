@@ -9,7 +9,7 @@ import '@mdi/font/css/materialdesignicons.css'
 export const vuetify = createVuetify({
     components,
     icons: {
-        defaultSet: 'mdi', // 这已经是默认值-仅用于显示目的 
+        defaultSet: 'mdi', // 这已经是默认值-仅用于显示目的
     },
     defaults: {
         VCard: {

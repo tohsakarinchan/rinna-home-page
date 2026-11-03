@@ -6,7 +6,7 @@ import { useMotionPreferences } from '../../../shared/composables/useMotionPrefe
 // One Leaflet instance owns markers, popup and route animation for a mounted journey.
 export function useJourneyMap(props, day, page, emit, { L }) {
   const mapEl = ref(null)
-  
+
   const active = ref('')
   const selectedStop = computed(() => day.value.stops.find(s => s.id === active.value))
   const tileError = ref(false)
@@ -68,7 +68,7 @@ export function useJourneyMap(props, day, page, emit, { L }) {
     }
   }
   function fit(includeArrival) {
-  
+
     closeCard()
     if (!map) return
     if (docked.value) { fitReadingSegment(); return }
@@ -217,5 +217,5 @@ export function useJourneyMap(props, day, page, emit, { L }) {
     cancelClose, closeCard, scheduleClose, focusStop, fit, retryTiles, revealPhoto,
     readingMapEl, motionAllowed, journeyEl, mapSlot, docked, slotHeight, readingChapter, readingLabel, chapterRoutes,
     updatePopup: () => popup?.update() }
-  
+
 }

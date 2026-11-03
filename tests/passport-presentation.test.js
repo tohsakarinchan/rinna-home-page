@@ -46,3 +46,76 @@ test('motion preference is shared, persisted and overridden by live system chang
   unmounts.forEach(fn => fn())
   assert.equal(listeners.size, 0)
 })
+
+
+test('passport navigation respects boundaries, animation lock, and reduced motion', async () => {
+  const source = await readFile(new URL('../src/components/TravelPassport.vue', import.meta.url), 'utf8')
+  const start = source.indexOf('const spreadIndex = ref(0)')
+  const end = source.indexOf('const latest = computed', start)
+  const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
+  const effects = ref(true)
+  const state = vm.runInNewContext(source.slice(start, end) + ';({ spreadIndex, currentSpread, turning, turnDirection, turnPage, handlePageKey })', { ref, computed, watch, spreads, effects })
+  state.turnPage(-1)
+  assert.equal(state.spreadIndex.value, 0)
+  state.turnPage(1)
+  assert.equal(state.currentSpread.value[0][0].number, 5)
+  state.turnPage(1)
+  assert.equal(state.spreadIndex.value, 1, 'ignore repeated clicks during a turn')
+  state.turning.value = false // Vue after-enter
+  state.turnPage(-1)
+  assert.equal(state.turnDirection.value, 'backward')
+  effects.value = false
+  await Promise.resolve()
+  assert.equal(state.turning.value, false)
+  state.turnPage(1)
+  state.turnPage(1)
+  state.turnPage(1)
+  assert.equal(state.spreadIndex.value, 2)
+  assert.equal(state.currentSpread.value[0][0].number, 9)
+  assert.equal(state.currentSpread.value[1].length, 0)
+  let prevented = false
+  state.handlePageKey({ key: 'ArrowLeft', preventDefault: () => { prevented = true }, currentTarget: { closest: () => null } })
+  assert.equal(prevented, true)
+  assert.equal(state.spreadIndex.value, 1)
+  state.handlePageKey({ key: 'ArrowLeft', ctrlKey: true })
+  assert.equal(state.spreadIndex.value, 1)
+  spreads.value = []
+  await Promise.resolve()
+  assert.equal(state.spreadIndex.value, 0)
+  assert.deepEqual(Array.from(state.currentSpread.value, page => page.length), [0, 0])
+})
+
+
+test('touch swipes turn four-card spreads without turning on scroll, taps or cancellation', async () => {
+  const source = await readFile(new URL('../src/components/TravelPassport.vue', import.meta.url), 'utf8')
+  const start = source.indexOf('const spreadIndex = ref(0)')
+  const end = source.indexOf('const latest = computed', start)
+  const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
+  const state = vm.runInNewContext(source.slice(start, end) + ';({ spreadIndex, startSwipe, moveSwipe, endSwipe, cancelSwipe, guardSwipeClick })', { ref, computed, watch, spreads, effects: ref(false) })
+  const surface = { clientWidth: 360, setPointerCapture() {} }
+  const event = (x, y, pointerType = 'touch') => ({ clientX: x, clientY: y, pointerId: 1, isPrimary: true, pointerType, currentTarget: surface })
+  const swipe = (x, y, pointerType) => {
+    state.startSwipe(event(200, 100, pointerType))
+    state.moveSwipe(event(x, y, pointerType))
+    state.endSwipe(event(x, y, pointerType))
+  }
+  swipe(90, 108)
+  assert.equal(state.spreadIndex.value, 1)
+  let prevented = false, stopped = false
+  state.guardSwipeClick({ preventDefault: () => { prevented = true }, stopPropagation: () => { stopped = true } })
+  assert.equal(prevented && stopped, true, 'a swipe must not open a journey')
+  swipe(310, 105)
+  assert.equal(state.spreadIndex.value, 0)
+  swipe(120, 270)
+  assert.equal(state.spreadIndex.value, 0, 'vertical scroll stays on the current spread')
+  swipe(195, 102)
+  state.guardSwipeClick({ preventDefault: () => assert.fail('tap must remain clickable'), stopPropagation() {} })
+  swipe(90, 100, 'mouse')
+  assert.equal(state.spreadIndex.value, 0)
+  state.startSwipe(event(200, 100))
+  state.cancelSwipe()
+  state.endSwipe(event(90, 100))
+  assert.equal(state.spreadIndex.value, 0)
+  swipe(310, 100)
+  assert.equal(state.spreadIndex.value, 0, 'first spread cannot swipe backwards')
+})

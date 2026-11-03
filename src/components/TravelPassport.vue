@@ -11,8 +11,11 @@
       <div class="passport-book" :class="{ 'effects-on': effects }">
         <div class="book-heading"><span>RINNA / TRAVEL PASSPORT</span><span>日本 · 私人旅行收藏</span></div>
         <div class="passport-intro"><span class="passport-emblem">✳</span><div><h3>旅の記録</h3><p>{{ trips.length }} 次出发，{{ trips.length }} 枚回忆。点一张贴纸，重访那段旅程。</p></div></div>
-        <div v-for="(spread, spreadIndex) in spreads" :key="spreadIndex" class="passport-spread">
-          <section v-for="(page, side) in spread" :key="side" class="passport-page" :aria-label="`护照第 ${spreadIndex * 2 + side + 1} 页`">
+        <div id="passport-current-spread" class="passport-stage" :class="`turn-${turnDirection}`" @keydown="handlePageKey"
+          @pointerdown="startSwipe" @pointermove="moveSwipe" @pointerup="endSwipe" @pointercancel="cancelSwipe" @click.capture="guardSwipeClick">
+        <Transition :name="effects ? 'page-turn' : ''" :css="effects" @before-leave="retireSpread" @after-enter="turning = false" @enter-cancelled="turning = false">
+        <div :key="spreadIndex" class="passport-spread">
+          <section v-for="(page, side) in currentSpread" :key="side" class="passport-page" :aria-label="`护照第 ${spreadIndex * 2 + side + 1} 页`">
           <div class="page-number">JAPAN · 旅の記録 <span>{{ String(spreadIndex * 2 + side + 1).padStart(2, '0') }}</span></div>
           <div class="sticker-grid">
           <button v-for="({ trip, number }) in page" :key="trip.id" class="trip-sticker" type="button" :style="{ '--ink': trip.color }"
@@ -24,10 +27,18 @@
             <span class="sticker-foot"><span>MEMORIES, NOT MILES.</span><span>打开回忆 ↗</span></span>
             <span class="sticker-effect" aria-hidden="true"><i v-for="n in 5" :key="n" :style="{ '--n': n }">{{ trip.effect === 'snow' ? '❄' : trip.effect === 'petals' ? '✿' : trip.effect === 'lights' ? '✧' : '〜' }}</i></span>
           </button>
-          <div v-if="page.length < 2" class="next-memory"><v-icon icon="mdi-airplane-takeoff" size="28"/><span>下一枚印记，留给下一次出发。</span><small>TO BE CONTINUED</small></div>
+          <div v-if="page.length < 2" class="next-memory" :class="{ 'empty-page': !page.length }"><v-icon icon="mdi-airplane-takeoff" size="28"/><span>下一枚印记，留给下一次出发。</span><small>TO BE CONTINUED</small></div>
           </div>
           </section>
         </div>
+        </Transition>
+        </div>
+        <nav v-if="spreads.length > 1" class="book-pagination" tabindex="-1" aria-label="护照翻页" @keydown="handlePageKey">
+          <button type="button" aria-controls="passport-current-spread" :disabled="spreadIndex === 0 || turning" @click="turnPage(-1)"><span aria-hidden="true">←</span> 上一页</button>
+          <span class="pagination-position" role="status" aria-live="polite" aria-atomic="true">{{ String(spreadIndex + 1).padStart(2, '0') }} / {{ String(spreads.length).padStart(2, '0') }}<small>第 {{ spreadIndex * 2 + 1 }} — {{ spreadIndex * 2 + 2 }} 页</small></span>
+          <button type="button" aria-controls="passport-current-spread" :disabled="spreadIndex >= spreads.length - 1 || turning" @click="turnPage(1)">下一页 <span aria-hidden="true">→</span></button>
+        </nav>
+        <p v-if="spreads.length > 1" class="swipe-hint">左右滑动，翻阅旅程</p>
         <footer class="book-footer"><span>纪念贴纸 · 非官方出入境凭证</span><span>01 — {{ String(trips.length).padStart(2, '0') }}</span></footer>
       </div>
       <aside class="passport-aside">
@@ -89,6 +100,67 @@ watch(dialog, value => { if (!value) detailController?.abort() })
 onBeforeUnmount(() => { detailController?.abort(); emit('dialog-change', false) })
 const trips = ref([])
 const spreads = computed(() => passportSpreads(trips.value))
+const spreadIndex = ref(0)
+const currentSpread = computed(() => spreads.value[spreadIndex.value] || [[], []])
+const turnDirection = ref('forward')
+const turning = ref(false)
+function turnPage(step) {
+  const target = spreadIndex.value + step
+  if (turning.value || target < 0 || target >= spreads.value.length) return
+  turnDirection.value = step > 0 ? 'forward' : 'backward'
+  turning.value = effects.value
+  spreadIndex.value = target
+}
+let swipe = null
+let suppressSwipeClick = false
+function startSwipe(event) {
+  suppressSwipeClick = false
+  if (turning.value || spreads.value.length < 2 || event.pointerType === 'mouse' || !event.isPrimary) return
+  swipe = { id: event.pointerId, x: event.clientX, y: event.clientY }
+}
+function moveSwipe(event) {
+  if (!swipe || swipe.id !== event.pointerId) return
+  const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y
+  if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { cancelSwipe(); return }
+  if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    suppressSwipeClick = true
+    event.currentTarget.setPointerCapture?.(event.pointerId)
+  }
+}
+function endSwipe(event) {
+  if (!swipe || swipe.id !== event.pointerId) return
+  const dx = event.clientX - swipe.x, dy = event.clientY - swipe.y
+  swipe = null
+  const threshold = Math.min(80, Math.max(40, event.currentTarget.clientWidth * .12))
+  if (Math.abs(dx) >= threshold && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    suppressSwipeClick = true
+    turnPage(dx < 0 ? 1 : -1)
+  }
+}
+function cancelSwipe() { swipe = null }
+function guardSwipeClick(event) {
+  if (!suppressSwipeClick) return
+  event.preventDefault()
+  event.stopPropagation()
+  suppressSwipeClick = false
+}
+function retireSpread(element) {
+  // Outgoing stickers remain visible during the turn but must not receive input.
+  element.inert = true
+  element.setAttribute('aria-hidden', 'true')
+}
+function handlePageKey(event) {
+  if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+  event.preventDefault()
+  // Keep keyboard focus outside the spread that is about to be removed.
+  if (!turning.value && ((event.key === 'ArrowLeft' && spreadIndex.value > 0) || (event.key === 'ArrowRight' && spreadIndex.value < spreads.value.length - 1))) {
+    event.currentTarget.closest('.passport-book')?.querySelector('.book-pagination')?.focus()
+  }
+  turnPage(event.key === 'ArrowLeft' ? -1 : 1)
+}
+watch(() => spreads.value.length, count => { spreadIndex.value = Math.min(spreadIndex.value, Math.max(0, count - 1)) })
+watch(effects, enabled => { if (!enabled) turning.value = false })
 const latest = computed(() => latestTrip(trips.value))
 const passportLoading = ref(true)
 const passportError = ref(false)
@@ -160,9 +232,27 @@ onMounted(loadPassport)
 .passport-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:10px; }
 .latest-trip { background:#f0e8d2; color:#294b43; border-radius:24px; padding:11px 16px; font-size:14px; font-weight:600; }
 .motion-toggle:disabled { opacity:.75; cursor:default; }
-.passport-spread { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:22px; border:1px solid #b9b49f; border-radius:4px 10px 10px 4px; box-shadow:0 3px 0 #d4cdb8; }
+.passport-stage { display:grid; perspective:1800px; margin-top:22px; touch-action:pan-y pinch-zoom; }
+.passport-spread { perspective:1400px; grid-area:1 / 1; position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border:1px solid #b9b49f; border-radius:4px 10px 10px 4px; box-shadow:0 3px 0 #d4cdb8; }
+.book-pagination { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:22px 0 10px; }
+.book-pagination button { min-height:44px; padding:10px 15px; border:1px solid #76877966; border-radius:3px; color:#435e53; background:#faf6e9; font-size:13px; transition:background .2s; }
+.book-pagination button:hover:not(:disabled) { background:#e3e7d7; }
+.book-pagination button:disabled { opacity:.38; cursor:default; }
+.book-pagination button:focus-visible,.book-pagination:focus-visible { outline:2px solid #527c78; outline-offset:4px; }
+.pagination-position { text-align:center; font:13px ui-monospace,monospace; letter-spacing:.12em; }
+.pagination-position small { display:block; margin-top:6px; font-size:10px; letter-spacing:.02em; color:#647168; }
+.page-turn-enter-active,.page-turn-leave-active { pointer-events:none; transition:opacity .6s ease; }
+.page-turn-enter-active .passport-page,.page-turn-leave-active .passport-page { backface-visibility:hidden; transition:transform .6s cubic-bezier(.3,.65,.25,1),filter .6s ease; }
+.page-turn-enter-active .passport-page:first-child,.page-turn-leave-active .passport-page:first-child { transform-origin:right center; }
+.page-turn-enter-active .passport-page:last-child,.page-turn-leave-active .passport-page:last-child { transform-origin:left center; }
+.page-turn-leave-active { z-index:2; }
+.page-turn-enter-from,.page-turn-leave-to { opacity:0; }
+.turn-forward .page-turn-leave-to .passport-page:last-child { transform:rotateY(-105deg); filter:brightness(.78); }
+.turn-forward .page-turn-enter-from .passport-page:first-child { transform:rotateY(75deg); filter:brightness(.85); }
+.turn-backward .page-turn-leave-to .passport-page:first-child { transform:rotateY(105deg); filter:brightness(.78); }
+.turn-backward .page-turn-enter-from .passport-page:last-child { transform:rotateY(-75deg); filter:brightness(.85); }
 .passport-spread::after { content:''; pointer-events:none; position:absolute; top:0; bottom:0; left:calc(50% - 10px); width:20px; background:linear-gradient(90deg,transparent,#554d3430 45%,#fff6da88 52%,transparent); }
-.passport-page { container-type:inline-size; container-name:passport-page; min-width:0; padding:18px 20px 24px; background:repeating-linear-gradient(35deg,#507b6808 0 1px,transparent 1px 7px),#f3eedf; }
+.passport-page { display:flex; flex-direction:column; container-type:inline-size; container-name:passport-page; min-width:0; padding:18px 20px 24px; background:repeating-linear-gradient(35deg,#507b6808 0 1px,transparent 1px 7px),#f3eedf; }
 .passport-page:first-child { border-right:1px solid #b5ac91; }
 .page-number { display:flex; justify-content:space-between; gap:6px; padding-bottom:14px; font:10px ui-monospace,monospace; color:#647568; }
 
@@ -172,7 +262,7 @@ onMounted(loadPassport)
 .passport-emblem { font-size:38px; color:#6e8270; }
 .passport-intro h3 { font-family:Georgia,'Songti SC',serif; font-size:26px; letter-spacing:.15em; font-weight:400; }
 .passport-intro p { font-size:14px; margin-top:7px; color:#647168; line-height:1.7; }
-.sticker-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:24px; }
+.sticker-grid { flex:1; display:grid; grid-template-rows:repeat(2,minmax(210px,1fr)); grid-template-columns:minmax(0,1fr); gap:24px; }
 .trip-sticker { position:relative; isolation:isolate; text-align:left; display:block; width:100%; min-width:0; aspect-ratio:auto; padding:14px; overflow-wrap:anywhere; border:1px solid color-mix(in srgb,var(--ink) 40%,transparent); border-radius:3px; background:repeating-linear-gradient(120deg,#64817b08 0 1px,transparent 1px 4px),#faf6e9; color:var(--ink); box-shadow:1px 4px 8px #4c412b20; transform:rotate(-.6deg); transition:transform .25s,box-shadow .25s; }
 .trip-sticker:nth-child(even) { transform:rotate(.6deg); }
 .trip-sticker:hover,.trip-sticker:focus-visible { transform:translateY(-5px) rotate(0); box-shadow:0 10px 18px #4c412b30; z-index:2; }
@@ -189,6 +279,9 @@ onMounted(loadPassport)
 .trip-places { display:block; min-height:35px; font-size:13px; line-height:1.8; }
 .sticker-foot { padding-top:9px; border-top:1px dashed currentColor; font-size:10px; }
 .next-memory { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:13px; text-align:center; border:1px dashed #6c7c6c66; color:#7c8777; border-radius:4px; padding:22px; font-size:11px; }
+.next-memory.empty-page { grid-row:span 2; }
+.swipe-hint { display:none; text-align:center; font-size:11px; color:#647168; margin-top:12px; }
+@media(pointer:coarse) { .swipe-hint { display:block; } }
 .next-memory small { font-size:8px; letter-spacing:.14em; }
 .book-footer { border-top:1px solid #40564b33; margin-top:28px; padding-top:12px; }
 .sticker-effect { position:absolute; inset:0; overflow:hidden; pointer-events:none; opacity:0; }

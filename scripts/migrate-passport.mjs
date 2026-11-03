@@ -2,8 +2,8 @@
 import { readFileSync, existsSync, writeFileSync } from 'node:fs'
 import { parseEnv } from 'node:util'
 import { createHash } from 'node:crypto'
-import { trips } from '../src/constants/trips.js'
-import { travelDays } from '../src/constants/travel-days.js'
+import { trips } from '../src/features/travel/data/trips.js'
+import { travelDays } from '../src/features/travel/data/travel-days.js'
 import { passportParent, databaseTitles, passportSchema } from '../server/passport-schema.js'
 import { notionClient, queryPages, propertyText } from '../server/notion-passport.js'
 

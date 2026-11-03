@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
-import { createGeoLoader, JAPAN_GEO_URL } from '../src/utils/japan-geo.js'
+import { createGeoLoader, JAPAN_GEO_URL } from '../src/shared/lib/japan-geo.js'
 
 test('map loads pinned local data with all 47 prefectures and intact geometry', async () => {
   assert.equal(JAPAN_GEO_URL, '/maps/japan-c686f194.geojson')

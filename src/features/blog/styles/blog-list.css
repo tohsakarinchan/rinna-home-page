@@ -1,0 +1,134 @@
+@import './blog-common.css';
+
+/* ── 顶部标题栏 ───────────────────────────────────────────
+   justify-content: flex-start → 三者从左到右紧凑排列
+   gap 控制间距，不用 space-between
+────────────────────────────────────────────────────────── */
+.blog-inline-header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    margin: 12px 12px 10px 12px;
+    flex-wrap: wrap;
+}
+.blog-section-title {
+    display: flex;
+    align-items: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 4px 0;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+.blog-search-input-wrap {
+    width: 180px;
+    flex-shrink: 0;
+}
+.blog-search-field :deep(.v-field) {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(10px);
+}
+.blog-search-field :deep(.v-field__outline) {
+    --v-field-border-opacity: 0.25;
+}
+/* ── 地图按钮 ─────────────────────────────────────────── */
+.map-btn-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+.map-trigger-btn {
+    transition: box-shadow 0.3s, transform 0.2s;
+}
+.map-btn-active {
+    box-shadow: 0 0 10px var(--leleo-vcard-color, rgba(255, 255, 255, 0.5));
+    animation: map-btn-pulse 2s ease-in-out infinite;
+}
+@keyframes map-btn-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 6px var(--leleo-vcard-color, rgba(255, 255, 255, 0.4));
+    }
+
+    50% {
+        box-shadow: 0 0 14px var(--leleo-vcard-color, rgba(255, 255, 255, 0.7));
+    }
+}
+.map-active-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--leleo-vcard-color, #4bdabe);
+    border: 1.5px solid rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+}
+.badge-pop-enter-active {
+    animation: badge-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.badge-pop-leave-active {
+    animation: badge-pop-out 0.2s ease-in;
+}
+@keyframes badge-pop-in {
+    from {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+@keyframes badge-pop-out {
+    from {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+    to {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+/* ── 右侧标签栏 ────────────────────────────────────────── */
+.sticky-sidebar {
+    position: sticky;
+    top: 16px;
+}
+.tag-filters-container {
+    display: flex;
+    flex-direction: column;
+    background: rgba(var(--v-theme-surface), 0.1);
+    backdrop-filter: blur(var(--leleo-blur, 10px));
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    width: fit-content;
+}
+.tag-label {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    margin-bottom: 6px;
+    align-self: flex-start;
+}
+.tag-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+/* ── 搜索提示 ──────────────────────────────────────────── */
+.search-hint {
+    margin: 0 12px 8px;
+    font-size: 0.78rem;
+    opacity: 0.7;
+    display: flex;
+    align-items: center;
+}
+/* ── 地图弹窗 ──────────────────────────────────────────── */
+/* ── 关键词高亮 ────────────────────────────────────────── */
+/* ── 文章卡片 ──────────────────────────────────────────── */

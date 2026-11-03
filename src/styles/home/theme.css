@@ -1,0 +1,64 @@
+/* Shared home-only glass surfaces; retain the user's wallpaper and settings. */
+.home-shell {
+  --glass-fill: var(--surface-glass);
+  --glass-edge: var(--border-glass);
+  --glass-shadow: var(--shadow-glass);
+  color: var(--text-on-dark);
+  font-family: var(--font-ui);
+}
+.identity-name { font-size:14px; font-weight:650; letter-spacing:.13em; text-align:left; }
+.identity-name small { display:block; margin-top:4px; font-size:12px; font-weight:400; letter-spacing:.03em; }
+.wallpaper-toggle { position:fixed; right:20px; bottom:18px; z-index:100; padding:10px 16px; border:1px solid #ffffff66; border-radius:24px; background:#243740ee; color:#f8f3e6; font-size:13px; }
+.wallpaper-toggle:focus-visible { outline:3px solid var(--focus-ring); outline-offset:3px; }
+.home-shell .web-search,
+.home-shell .clock-card,
+.home-shell .blog-inline-card,
+.home-shell .tag-filters-container,
+.home-shell .footprint-preview {
+  background: var(--glass-fill) !important;
+  color: var(--text-on-dark) !important;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius-panel) !important;
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(155%);
+  backdrop-filter: blur(24px) saturate(155%);
+}
+.home-shell .web-search { border-radius: 100px !important; }
+.home-shell .web-search .v-field__outline { opacity: 0; }
+.home-shell .clock-card { margin: 0 !important; padding: 8px 0 12px; }
+.home-shell .clock-font { font-family: var(--font-ui) !important; font-size: 26px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+.home-shell .clock-card .v-card-subtitle { font-size: 11px; opacity: .85; }
+.home-shell .travel-section { margin-top: 28px; }
+.home-shell .blog-inline-header { margin: 0 8px 18px; gap: 16px; }
+.home-shell .blog-section-title { font-size: 19px; letter-spacing: -.02em; color: #fff !important; text-shadow: 0 2px 12px #0008; }
+.home-shell .blog-search-input-wrap { margin-left: auto; width: min(220px, 48%); }
+.home-shell .blog-search-field .v-field { color: #fff; background: rgba(20,32,48,.55); border-radius: 40px; }
+.home-shell .blog-inline-card { overflow: hidden; }
+.home-shell .blog-inline-card .v-card-text { padding: 20px !important; }
+.home-shell .blog-inline-title { font-size: 20px; line-height: 1.5; margin: 8px 0; font-weight: 600; }
+.home-shell .blog-inline-summary { font-size: 14px; line-height: 1.8; opacity: .85; margin-bottom: 16px; }
+.home-shell .blog-inline-card .v-img { max-height: 265px; }
+.home-shell .sticky-sidebar { display: grid; gap: 18px; padding-top: 8px; }
+.home-shell .tag-filters-container { width: 100%; padding: 20px; }
+.home-shell .tag-label { opacity: .85; margin-bottom: 12px; }
+.footprint-preview { display: flex; flex-direction: column; width: 100%; padding: 22px 18px; text-align: left; cursor: pointer; transition: transform .25s, box-shadow .25s; }
+.footprint-preview:hover { transform: translateY(-3px); box-shadow: inset 0 1px 0 #fffc, 0 18px 42px #08172b55; }
+.footprint-eyebrow { font-size: 9px; letter-spacing: .15em; opacity: .72; }
+.footprint-heading { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 10px; font-size: 18px; font-weight: 600; }
+.footprint-map { display: block; width: 100%; }
+.footprint-caption { font-size: 13px; font-weight: 550; }
+.footprint-link { margin-top: 6px; font-size: 11px; opacity: .72; }
+.home-shell button:focus-visible, .home-shell a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 4px; }
+.map-dialog-card { border-radius: 28px !important; box-shadow: inset 0 1px 0 #ffffff55, 0 32px 80px #06101e66 !important; }
+@media (max-width: 600px) {
+  .home-shell { padding:20px 10px 76px; }
+  .identity-name small { font-size:11px; }
+  .home-shell .footprint-preview { padding:18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-shell *, .map-dialog-card * { animation: none !important; transition: none !important; }
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .home-shell { --glass-fill: var(--surface-glass-fallback); }
+}
+html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; }

@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite --host",
     "dev:api": "node scripts/dev-api.mjs",
-    "test": "node --test tests/*.test.js",
+    "test": "node scripts/test.mjs",
+    "check:source": "node scripts/check-source.mjs",
     "build": "vite build --outDir dist/client && node scripts/build-sites.mjs",
     "preview": "vite preview --outDir dist/client",
     "docs:dev": "vitepress dev docs",

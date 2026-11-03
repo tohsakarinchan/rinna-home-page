@@ -1,0 +1,10 @@
+
+.fade-hint-enter-active,
+.fade-hint-leave-active {
+    transition: opacity 0.2s, transform 0.2s;
+}
+.fade-hint-enter-from,
+.fade-hint-leave-to {
+    opacity: 0;
+    transform: translateY(-4px);
+}

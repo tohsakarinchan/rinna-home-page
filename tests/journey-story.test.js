@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { cityStops, journeyStories } from '../src/constants/journey-stories.js'
+import { cityStops, journeyStories } from '../src/features/travel/data/journey-stories.js'
 test('airport filtering keeps out-of-city sightseeing and does not mutate input', () => {
  const stops = [{name:'成田机场'}, {name:'Kansai Airport'}, {name:'Terminal',kind:'airport'}, {name:'富士山',outsideCity:true}, {name:'上野'}]
  assert.deepEqual(cityStops(stops).map(s=>s.name), ['富士山','上野'])

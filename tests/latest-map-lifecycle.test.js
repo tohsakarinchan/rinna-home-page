@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { existsSync } from 'node:fs'
 import vm from 'node:vm'
 import * as echarts from 'echarts/core'
 import { MapChart } from 'echarts/charts'
@@ -12,7 +13,8 @@ const noop = () => {}
 const ref = value => ({ value })
 async function component(file, globals, exports) {
   const root = process.env.RINNA_REVIEW_SOURCE_ROOT || process.cwd()
-  const text = await readFile(resolve(root, 'src/components', file), 'utf8')
+  const current = resolve(root, 'src/shared/components/geography', file)
+  const text = await readFile(existsSync(current) ? current : resolve(root, 'src/components', file), 'utf8')
   const script = text.match(/<script setup>([\s\S]*?)<\/script>/)[1].replace(/^import .*$/gm, '')
   return vm.runInNewContext(script + `\n;({${exports}})`, {
     ref, computed: getter => ({ get value() { return getter() } }), watch: noop,

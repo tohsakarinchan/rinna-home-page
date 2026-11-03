@@ -1,0 +1,22 @@
+@import './passport-common.css';
+
+.trip-sticker:focus-visible,.motion-toggle:focus-visible,.place-chips button:focus-visible { outline:3px solid #59a7b3; outline-offset:4px; }
+.passport-dialog { display:flex; flex-direction:column; max-height:calc(100dvh - 48px); background:var(--surface-dialog) !important; color:#f4f3ea !important; border:1px solid #fff4; border-radius:26px !important; backdrop-filter:none; }
+.trip-dialog-header,.trip-dialog-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 24px; flex-shrink:0; }
+.trip-dialog-header h2 { font-size:23px; font-weight:500; margin-top:5px; }
+.trip-dialog-body { min-height:0; overflow-anchor:none; overflow-y:auto; padding:0 24px 16px; }
+.journey-split .trip-dialog-body { margin-right:41%; }
+.journey-map-host { position:absolute; right:24px; top:104px; bottom:24px; width:calc(41% - 24px); color:var(--text-paper); background:var(--surface-paper); border-radius:18px; padding:16px; overflow:hidden; }
+.arrival-memory { display:flex; align-items:center; justify-content:center; gap:14px; background:#eeeade; color:var(--ink); border:4px double var(--ink); padding:15px; margin:10px 0 20px; font:13px Georgia,serif; }
+.animate-stamp { animation:stamp-arrival .4s ease-out; }
+@keyframes stamp-arrival { from { opacity:0; transform:scale(1.12) rotate(-4deg); } to { opacity:1; transform:scale(1) rotate(0); } }
+.trip-location-text { font-size:13px; line-height:1.8; }
+.place-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+.place-chips button { border:1px solid #ffffff44; padding:7px 11px; border-radius:18px; font-size:12px; }
+.place-chips button[aria-pressed=true] { background:#eee3ad; color:#27353f; }
+.route-note { font-size:11px; opacity:.7; line-height:1.8; margin-top:14px; }
+.trip-dialog-footer { border-top:1px solid #fff2; padding:10px 20px; font-size:12px; }
+@media(max-width:600px) {
+  .trip-dialog-body { padding:0 14px 14px; }
+  .trip-dialog-header { padding:16px; }
+}

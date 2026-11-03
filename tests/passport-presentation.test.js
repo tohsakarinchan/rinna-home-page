@@ -1,9 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
-import vm from 'node:vm'
-import { ref, computed, watch } from 'vue'
-import { passportSpreads, latestTrip } from '../src/utils/passport-layout.js'
+import { mountComposable, mockGlobal } from './helpers/vue.js'
+import { useMotionPreferences } from '../src/shared/composables/useMotionPreferences.js'
+import { ref, effectScope } from 'vue'
+import { usePassportNavigation } from '../src/features/travel/composables/usePassportNavigation.js'
+import { passportSpreads, latestTrip } from '../src/features/travel/domain/passport-layout.js'
 
 test('stickers remain on individual pages, including incomplete spreads', () => {
   for (const count of [0, 1, 2, 3, 4, 5, 9]) {
@@ -22,39 +23,35 @@ test('latest journey follows month rather than editorial display order', () => {
   assert.equal(latestTrip([]), null)
 })
 
-test('motion preference is shared, persisted and overridden by live system changes', async () => {
-  const mounts = [], unmounts = [], listeners = new Set(), storage = new Map()
-  const document = { documentElement: { dataset: {} } }
+test('motion preference is shared, persisted and overridden by live system changes', t => {
+  const listeners = new Set(), storage = new Map()
   const query = { matches: false, addEventListener: (_, fn) => listeners.add(fn), removeEventListener: (_, fn) => listeners.delete(fn) }
-  const source = (await readFile(new URL('../src/utils/motion-preferences.js', import.meta.url), 'utf8')).replace(/^import .*$/gm, '').replace('export function', 'function')
-  const use = vm.runInNewContext(source + ';useMotionPreferences', {
-    ref, computed, watch, onMounted: fn => mounts.push(fn), onBeforeUnmount: fn => unmounts.push(fn),
-    document, window: { matchMedia: () => query }, localStorage: { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) },
-  })
-  const home = use(), landmarks = use()
-  mounts.forEach(fn => fn())
+  mockGlobal(t, 'document', { documentElement: { dataset: {} } })
+  mockGlobal(t, 'window', { matchMedia: () => query })
+  mockGlobal(t, 'localStorage', { getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value) })
+  const home = mountComposable(useMotionPreferences), landmarks = mountComposable(useMotionPreferences)
   assert.equal(listeners.size, 1)
-  home.toggleMotion()
-  assert.equal(landmarks.motionEnabled.value, false)
+  home.state.toggleMotion()
+  assert.equal(landmarks.state.motionEnabled.value, false)
   assert.equal(document.documentElement.dataset.motion, 'off')
   assert.equal(storage.get('rinna-motion-enabled'), 'false')
-  home.toggleMotion()
+  home.state.toggleMotion()
   query.matches = true; listeners.forEach(fn => fn())
-  assert.equal(home.motionEnabled.value, false)
+  assert.equal(home.state.motionEnabled.value, false)
   query.matches = false; listeners.forEach(fn => fn())
-  assert.equal(home.motionEnabled.value, true)
-  unmounts.forEach(fn => fn())
+  assert.equal(home.state.motionEnabled.value, true)
+  home.unmount()
+  assert.equal(listeners.size, 1)
+  landmarks.unmount()
   assert.equal(listeners.size, 0)
 })
 
-
-test('passport navigation respects boundaries, animation lock, and reduced motion', async () => {
-  const source = await readFile(new URL('../src/components/TravelPassport.vue', import.meta.url), 'utf8')
-  const start = source.indexOf('const spreadIndex = ref(0)')
-  const end = source.indexOf('const latest = computed', start)
+test('passport navigation respects boundaries, animation lock, and reduced motion', async t => {
+  const scope = effectScope()
+  t.after(() => scope.stop())
   const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
   const effects = ref(true)
-  const state = vm.runInNewContext(source.slice(start, end) + ';({ spreadIndex, currentSpread, turning, turnDirection, turnPage, handlePageKey })', { ref, computed, watch, spreads, effects })
+  const state = scope.run(() => usePassportNavigation(spreads, effects))
   state.turnPage(-1)
   assert.equal(state.spreadIndex.value, 0)
   state.turnPage(1)
@@ -86,12 +83,11 @@ test('passport navigation respects boundaries, animation lock, and reduced motio
 })
 
 
-test('touch swipes turn four-card spreads without turning on scroll, taps or cancellation', async () => {
-  const source = await readFile(new URL('../src/components/TravelPassport.vue', import.meta.url), 'utf8')
-  const start = source.indexOf('const spreadIndex = ref(0)')
-  const end = source.indexOf('const latest = computed', start)
+test('touch swipes turn four-card spreads without turning on scroll, taps or cancellation', async t => {
+  const scope = effectScope()
+  t.after(() => scope.stop())
   const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
-  const state = vm.runInNewContext(source.slice(start, end) + ';({ spreadIndex, startSwipe, moveSwipe, endSwipe, cancelSwipe, guardSwipeClick })', { ref, computed, watch, spreads, effects: ref(false) })
+  const state = scope.run(() => usePassportNavigation(spreads, ref(false)))
   const surface = { clientWidth: 360, setPointerCapture() {} }
   const event = (x, y, pointerType = 'touch') => ({ clientX: x, clientY: y, pointerId: 1, isPrimary: true, pointerType, currentTarget: surface })
   const swipe = (x, y, pointerType) => {

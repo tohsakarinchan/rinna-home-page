@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { orderedDays, mapStops } from '../src/constants/travel-days.js'
+import { orderedDays, mapStops } from '../src/features/travel/data/travel-days.js'
 
 test('first journey contains only the confirmed date and ordered nine stops', () => {
   const days = orderedDays('01')

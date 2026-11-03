@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createGeoLoader } from '../src/utils/japan-geo.js'
+import { createGeoLoader } from '../src/shared/lib/japan-geo.js'
 import { passportResponse } from '../server/notion-passport.js'
 import worker from '../worker/index.js'
 import vercelCover from '../api/notion-cover.js'

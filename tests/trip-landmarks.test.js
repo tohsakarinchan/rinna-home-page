@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { tripLandmarks } from '../src/constants/trip-landmarks.js'
-import { layoutLandmarks } from '../src/utils/landmark-layout.js'
+import { tripLandmarks } from '../src/features/travel/data/trip-landmarks.js'
+import { layoutLandmarks } from '../src/shared/domain/geography/landmark-layout.js'
 test('confirmed visits work with Notion UUIDs and remain specific to their journey', () => {
  assert.deepEqual(tripLandmarks({ id: 'uuid', month: '2024.06' }).map(p => p.id), ['tokyo-tower'])
  assert.deepEqual(tripLandmarks({ month: '2026.03' }).map(p => p.id), [])

@@ -1,18 +1,22 @@
 # 项目映射
 
-核验日期：2026-10-28；范围为本地入口、共用服务和构建映射，不证明线上正在使用这些版本。
+核验日期：2026-11-03；范围为重构后的本地源码入口、共用服务和构建映射，不证明线上正在使用这些版本。
 
 ## 页面与数据
 
 | 对象 | 路径与关系 |
 | --- | --- |
-| 应用入口 | [src/main.js](../../src/main.js) 挂载 RootApp 并安装路由；[路由](../../src/router/index.js) 将 `/` 指向 App、`/blog/:slug` 指向 BlogPost |
-| 主页配置 | [src/config.js](../../src/config.js) 为配置文件；[src/app.js](../../src/app.js) 中搜索 `VITE_CONFIG` 定位覆盖逻辑；字段说明沿用 [配置说明](../../img/config.md) |
-| 旅行界面 | [TravelPassport](../../src/components/TravelPassport.vue)、[DailyJourney](../../src/components/DailyJourney.vue)、[JapanPrefectureMap](../../src/components/JapanPrefectureMap.vue)；行为资料按 [索引](../../PROJECT_INDEX.md) 路由 |
+| 应用入口 | [src/main.js](../../src/main.js) 挂载 [app/App.vue](../../src/app/App.vue)，安装 [Vuetify](../../src/app/plugins/vuetify.js) 与 [路由](../../src/app/router.js)；`/` 指向 HomePage，`/blog/:slug` 延迟加载 BlogPostPage |
+| 主页配置 | [shared/config/defaults.js](../../src/shared/config/defaults.js) 保存默认值；[site.js](../../src/shared/config/site.js) 为唯一读取入口，统一处理 `VITE_CONFIG` 覆盖；字段说明见 [配置说明](../../img/config.md) |
+| 页面与展示 | [HomePage](../../src/features/home/pages/HomePage.vue) 编排首页，[HomeLayout](../../src/layouts/HomeLayout.vue) 管理外壳；[TravelPassport](../../src/features/travel/components/TravelPassport.vue) 编排护照，[TripDialog](../../src/features/travel/components/TripDialog.vue) 管理旅程弹窗，[DailyJourney](../../src/features/travel/components/DailyJourney.vue) 展示每日内容 |
+| 旅行逻辑 | `features/travel/api/` 管理摘要/详情请求与校验；`composables/` 的 [usePassportData](../../src/features/travel/composables/usePassportData.js)、[usePassportNavigation](../../src/features/travel/composables/usePassportNavigation.js)、[useJourneyMap](../../src/features/travel/composables/useJourneyMap.js)、[useReadingProgress](../../src/features/travel/composables/useReadingProgress.js) 分别管理数据、翻页、Leaflet 实例及阅读联动；纯逻辑在 `domain/`，本地种子和资料在 `data/` |
+| 博客前端 | [API](../../src/features/blog/api/blog.js) 管理文章列表、正文和到访记录请求及校验；[BlogList](../../src/features/blog/components/BlogList.vue) 组合卡片与足迹弹窗，数据/搜索/文章阅读逻辑分别在 `features/blog/composables/`；搜索与到访记录转换在 `domain/`。保留当前首页隐藏独立博客列表的行为 |
+| 外观与共享能力 | `features/appearance/` 管理设置、壁纸选择与播放；[共享动态偏好](../../src/shared/composables/useMotionPreferences.js) 供首页、旅行与地标使用；共用地理渲染组件位于 [shared/components/geography/](../../src/shared/components/geography/JapanPrefectureMap.vue)，不依赖旅行内容 |
+| 样式入口 | [styles/index.css](../../src/styles/index.css) 顺序加载语义变量、基础样式、首页布局和主题；[tokens.css](../../src/styles/tokens.css) 保持当前默认视觉值，既有 `--leleo-*` 设置通过统一外观入口写入。特定组件样式归功能目录；`styles/legacy/` 集中保留旧 LESS 兼容样式，不再从 public/css 加载 |
 | 护照服务 | [server/notion-passport.js](../../server/notion-passport.js) 为共享处理入口；`?view=summary` 只读旅行/地区，`?trip=<id>` 按关联读详情，不带参数保留完整响应；数据库映射在 [passport-config.js](../../server/passport-config.js)，字段语义沿用 [交接专题](../passport-preview-handoff.md#内容在哪里编辑) |
 | 博客与媒体 | [blog-list](../../server/blog-list.js)、[blog-post](../../server/blog-post.js)、[notion-media](../../server/notion-media.js) 为共享实现；`functions/api/` 提供 Sites/Pages 入口，`api/` 通过 [Node 适配器](../../server/node-adapter.js) 接入 Vercel |
-| 静态资源 | `public/`、`img/`；都道府县地图固定于 `public/maps/japan-c686f194.geojson`，来源与更新约束见 [地图说明](../../public/maps/README.md)，由 [加载器](../../src/utils/japan-geo.js) 同站读取 |
-| 测试 | [package.json](../../package.json) 的 `test` 脚本指向 `tests/*.test.js`；按修改对象选择相关测试 |
+| 静态资源 | `public/`、`img/`；都道府县地图固定于 `public/maps/japan-c686f194.geojson`，来源与更新约束见 [地图说明](../../public/maps/README.md)，由 [加载器](../../src/shared/lib/japan-geo.js) 同站读取 |
+| 测试 | [package.json](../../package.json) 的 `test` 通过 [scripts/test.mjs](../../scripts/test.mjs) 枚举 `tests/*.test.js`，避免依赖平台通配符展开；`npm run check:source` 检查源码导入与全部 Vue 模板（含未在首页使用的列表）；按修改对象选择相关测试 |
 
 ## 版本与运行配置
 

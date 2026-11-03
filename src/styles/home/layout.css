@@ -1,0 +1,18 @@
+
+.home-shell {
+  height: 100%;
+  overflow: auto;
+  padding: clamp(16px, 3vw, 42px);
+}
+.home-shell > .v-row { max-width:1440px; margin:0 auto; gap:20px; flex-direction:column; flex-wrap:nowrap; }
+.home-shell .leleo-left { display:flex; flex:0 0 auto; flex-direction:row; max-width:none; width:100%; min-height:0; height:auto !important; justify-content:flex-start !important; gap:14px; padding:0 0 16px; border-bottom:1px solid #ffffff30; }
+.home-shell .leleo-left-avatar { width:44px !important; height:44px !important; flex-shrink:0; border:1px solid #ffffff88; }
+.quiet-clock { margin-left:auto; font-size:12px; font-variant-numeric:tabular-nums; opacity:.85; }
+.quiet-clock span { margin-left:10px; }
+.home-tools { display:flex; gap:2px; }
+.home-shell .home-main { flex:1; width:100%; max-width:none; min-width:0; padding:0; }
+@media (max-width: 600px) {
+  .home-shell .leleo-left { gap:10px; flex-wrap:wrap; }
+  .quiet-clock { order:3; width:100%; text-align:left; margin:0; }
+  .home-tools { margin-left:auto; }
+}

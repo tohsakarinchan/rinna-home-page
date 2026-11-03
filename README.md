@@ -119,13 +119,13 @@ npm run dev
 
 ### 方法1. 修改配置文件
 
-自定义数据文件为项目src目录下面的 config.js，这里有[配置说明](./img/config.md)，然后就是代码的拉取、修改上传。如果部署方式为CloudFlare Page，直接在Github修改后Commit即可自动部署
+自定义默认配置位于 [src/shared/config/defaults.js](./src/shared/config/defaults.js)，字段见[配置说明](./img/config.md)。页面与设置通过 `src/shared/config/site.js` 统一读取配置。修改后按当前部署方式构建与发布，部署入口见 [MAP](./docs/context/MAP.md)。
 
 **若使用此方法请勿配置环境变量**
 
 ### 方法2. 在线修改环境变量
 
-**注意**：在vercel中此方法优先级高于方法1，CloudFlare中方法1优先级更高
+**注意**：当前前端统一由 `VITE_CONFIG` 覆盖默认配置；它是构建期配置，不区分托管平台。
 
 #### vercel部署
 

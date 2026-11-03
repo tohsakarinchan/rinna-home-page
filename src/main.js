@@ -1,26 +1,10 @@
 import { createApp } from 'vue'
-import RootApp from './RootApp.vue'
-import router from './router/index.js'
+import RootApp from './app/App.vue'
+import router from './app/router.js'
 
-// Vuetify
-import 'vuetify/styles'
-import { createVuetify } from 'vuetify'
-import { VApp, VAvatar, VBtn, VCard, VCardActions, VCardText, VChip, VCol, VColorPicker, VContainer, VDialog, VDivider, VFab, VForm, VIcon, VImg, VList, VListItem, VListItemTitle, VMenu, VPagination, VProgressCircular, VRadioGroup, VRow, VSkeletonLoader, VSlider, VSnackbar, VSpacer, VSpeedDial, VSwitch, VTab, VTabs, VTabsWindowItem, VTextField, VTooltip } from 'vuetify/components'
-const components = { VApp, VAvatar, VBtn, VCard, VCardActions, VCardText, VChip, VCol, VColorPicker, VContainer, VDialog, VDivider, VFab, VForm, VIcon, VImg, VList, VListItem, VListItemTitle, VMenu, VPagination, VProgressCircular, VRadioGroup, VRow, VSkeletonLoader, VSlider, VSnackbar, VSpacer, VSpeedDial, VSwitch, VTab, VTabs, VTabsWindowItem, VTextField, VTooltip }
-import '@mdi/font/css/materialdesignicons.css'
+import { vuetify } from './app/plugins/vuetify.js'
+import './styles/index.css'
 
-
-const vuetify = createVuetify({
-    components,
-    icons: {
-        defaultSet: 'mdi', // 这已经是默认值-仅用于显示目的 
-    },
-    defaults: {
-        VCard: {
-            variant: 'tonal',
-        },
-    },
-})
 const app = createApp(RootApp);
 app.use(vuetify).use(router).mount('#app')
 

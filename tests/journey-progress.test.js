@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { chapterStops, routePrefix } from '../src/utils/journey-progress.js'
-import { orderedDays } from '../src/constants/travel-days.js'
+import { chapterStops, routePrefix } from '../src/features/travel/domain/journey-progress.js'
+import { orderedDays } from '../src/features/travel/data/travel-days.js'
 test('Tokyo paragraphs follow the actual named stops without repeating previous stops', () => {
   assert.deepEqual(chapterStops(orderedDays('01')[0]), [[0], [1,2], [3,4,5], [6,7], [8]])
 })

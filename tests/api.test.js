@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fetchJson, fetchPostPage } from '../src/utils/api.js'
+import { fetchJson, fetchPostPage } from '../src/shared/lib/http.js'
 import { onRequest } from '../functions/api/visit-data.js'
 import { onRequestGet } from '../functions/api/blog-list.js'
 import vercelVisits from '../api/visit-data.js'

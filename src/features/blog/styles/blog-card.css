@@ -1,0 +1,35 @@
+
+:deep(.search-highlight) {
+    background: var(--leleo-vcard-color);
+    color: #000;
+    border-radius: 2px;
+    padding: 0 2px;
+    font-style: normal;
+}
+.blog-inline-card {
+    transition: transform 0.2s;
+    text-decoration: none;
+}
+.blog-inline-card:hover {
+    transform: translateY(-3px);
+}
+.blog-inline-title {
+    font-size: 0.85rem;
+    font-weight: bold;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+.blog-inline-summary {
+    font-size: 0.72rem;
+    opacity: 0.65;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

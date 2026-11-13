@@ -30,7 +30,7 @@ function walk(directory) {
       errors.push(...template.errors)
       if (descriptor.scriptSetup) {
         for (const match of template.code.matchAll(/_resolveComponent\("([^"\n]+)"\)/g)) {
-          if (!/^(v-|V[A-Z]|router-link|RouterView)/.test(match[1])) errors.push(file + ': unresolved component ' + match[1])
+          if (!/^(v-|V[A-Z]|router-link$|RouterLink$|RouterView$)/.test(match[1])) errors.push(file + ': unresolved component ' + match[1])
         }
         const unbound = new Set([...template.code.matchAll(/_ctx\.([\w$]+)/g)].map(match => match[1]))
         for (const name of unbound) {

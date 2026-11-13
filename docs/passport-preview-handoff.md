@@ -39,4 +39,4 @@ Color 使用六位十六进制色值，Icon 使用 `mdi-...` 名称，Effect 可
 - `scripts/import-travel-2026.mjs` 是此前一次性脚本，仍不提交、不执行。
 - 数据库 ID 位于 `server/passport-config.js`，不是凭证；Notion token 仍只来自服务器环境变量。生产使用原有 `NOTION_TOKEN` 与 `NOTION_PLACES_DATABASE_ID`。
 - 本地常数仅保留作迁移种子与测试资料；正式前端不导入它们。生产 API 仅读取 Published 内容，照片签名链接通过短缓存刷新。
-- `npm test` 覆盖排序、关系、分页、照片、无效 URL、空白及失败状态；`npm run build` 校验构建。用户要求后续修改不操作浏览器验证，由用户自行查看页面。
+- `npm test` 覆盖排序、关系、分页、照片、无效 URL、空白及失败状态；`npm run build` 校验构建。浏览器验证按 [项目规则](../AGENTS.md#文档职责与验证) 执行：用户于 2026-11-06 更新要求，每次页面改动后自行打开本地预览检查，真实设备手感及最终用户验收单独说明。

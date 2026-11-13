@@ -24,11 +24,12 @@
 
 ## 文档职责与验证
 
+- 后续涉及美术、动效或交互调整时，参考用户指定的[审美参考网站](docs/design-references.md)，结合当前任务选择适用方向。
 - 长期规则写本文件；定位与条件路由写 [PROJECT_INDEX.md](PROJECT_INDEX.md)；用途和基本使用写 [README.md](README.md)。
 - 当前目标与证据写 [NOW](docs/context/NOW.md)；结构、版本来源和部署映射写 [MAP](docs/context/MAP.md)；操作前置条件与验证方法写 [RUNBOOK](docs/context/RUNBOOK.md)。
 - 已确认决策写 [DECISIONS](docs/context/DECISIONS.md)；问题与验证缺口写 [RISKS](docs/context/RISKS.md)；必要归档先查 [历史索引](docs/context/history/README.md)。已有专题继续承载专题正文，不重复抄入这些入口。
 - 仅修改文档时，检查本次差异、直接关联的本地链接、职责边界和既有内容保留情况，无需因此执行应用测试或全项目审计。
-- 修改代码时，按影响范围选择测试与构建，记录实际结果与范围；未执行、失败、用户验收和发布授权分别说明。旅行功能已有约定是不操作浏览器验证，由用户查看，来源见 [交接文档的技术维护章节](docs/passport-preview-handoff.md#迁移与技术维护)。
+- 修改代码时，按影响范围选择测试与构建，记录实际结果与范围；未执行、失败、用户验收和发布授权分别说明。用户于 2026-11-06 更新约定：每次页面改动后自行打开本地预览检查实际效果，发现问题继续修正并复查，不能仅凭构建通过宣称界面已修复；旅行功能亦适用。真实设备手感及最终用户验收单独说明，见 [交接文档的技术维护章节](docs/passport-preview-handoff.md#迁移与技术维护)。
 - 保留已有未提交成果，不擅自覆盖、清理或提交。内容迁移及外部发布须有对应任务授权，不能仅凭操作文档执行。
 
 <!-- VERCEL BEST PRACTICES START -->

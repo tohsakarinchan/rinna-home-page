@@ -1,0 +1,67 @@
+.passport-page { position:relative; display:flex; flex-direction:column; container-type:inline-size; container-name:passport-page; min-width:0; padding:20px 24px 16px; background:repeating-radial-gradient(ellipse at 20% 65%,transparent 0 7px,#507b6809 7.5px 8px,transparent 8.5px 14px),#f3eedf; }
+.passport-page.page-left { border-radius:var(--passport-page-radius,10px) 0 0 var(--passport-page-radius,10px); background-color:#f0ebdd; }
+.passport-page.page-right { border-radius:0 var(--passport-page-radius,10px) var(--passport-page-radius,10px) 0; }
+.page-number { display:flex; align-items:center; justify-content:space-between; gap:6px; font:10px ui-monospace,monospace; color:#647568; }
+.page-number>span:last-child { font-size:16px; opacity:.75; }
+.passport-page-heading { margin:16px 0 26px; color:#617565; }
+.passport-page-heading h2 { font:400 25px/1.4 'Songti SC','SimSun',serif; letter-spacing:.15em; }
+.passport-page-heading>span { display:block; margin-top:5px; font:9px ui-monospace,monospace; letter-spacing:.08em; }
+.passport-page-footer { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:8px; padding-top:24px; font-size:9px; color:#647568; }
+.passport-page-footer>span:last-child { font-family:ui-monospace,monospace; letter-spacing:.12em; }
+.sticker-grid { flex:1; display:grid; grid-template-rows:repeat(2,minmax(210px,1fr)); grid-template-columns:minmax(0,1fr); gap:24px; }
+.trip-sticker { position:relative; isolation:isolate; text-align:left; display:block; width:100%; min-width:0; aspect-ratio:auto; padding:14px; overflow-wrap:anywhere; border:1px solid color-mix(in srgb,var(--ink) 40%,transparent); border-radius:3px; background:repeating-linear-gradient(120deg,#64817b08 0 1px,transparent 1px 4px),var(--surface-sticker); color:var(--ink); box-shadow:1px 4px 8px #4c412b20; transform:rotate(-.6deg); transition:transform .25s,box-shadow .25s; }
+.trip-sticker:nth-child(even) { transform:rotate(.6deg); }
+.trip-sticker:hover,.trip-sticker:focus-visible { transform:translateY(-5px) rotate(0); box-shadow:0 10px 18px #4c412b30; z-index:2; }
+.sticker-head,.sticker-foot { display:flex; justify-content:space-between; gap:6px; font:8px ui-monospace,monospace; letter-spacing:.025em; }
+.sticker-head { border-bottom:1px solid currentColor; padding-bottom:8px; }
+.sticker-body { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:13px 0; }
+.sticker-text { display:flex; flex-direction:column; min-width:0; }
+.trip-date { font:20px Georgia,serif; letter-spacing:.03em; }
+.sticker-text strong { font-size:17px; font-weight:550; margin-top:7px; }
+.trip-subtitle { font-size:12px; line-height:1.5; letter-spacing:.03em; margin-top:6px; }
+.travel-stamp { flex-shrink:0; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:3px; width:75px; height:75px; border:3px double currentColor; border-radius:50%; transform:rotate(-15deg); opacity:.8; font:7px ui-monospace,monospace; }
+.travel-stamp span:last-child { font-size:6px; }
+.trip-places { display:block; min-height:35px; font-size:13px; line-height:1.8; }
+.places-compact { display:none; }
+.sticker-foot { padding-top:9px; border-top:1px dashed currentColor; font-size:10px; }
+.next-memory { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:13px; text-align:center; border:1px dashed #6c7c6c66; color:#7c8777; border-radius:4px; padding:22px; font-size:11px; }
+.next-memory.empty-page { grid-row:span 2; }
+.next-memory small { font-size:8px; letter-spacing:.14em; }
+.sticker-effect { position:absolute; inset:0; overflow:hidden; pointer-events:none; opacity:0; }
+.sticker-effect i { position:absolute; left:calc(var(--n) * 17%); top:20%; font-size:20px; font-style:normal; }
+.trip-sticker.effects-on:is(:hover,:focus-visible) .sticker-effect { opacity:1; }
+.trip-sticker.effects-on:is(:hover,:focus-visible) .sticker-effect i { animation:float-memory 1.6s ease-out both; animation-delay:calc(var(--n) * .07s); }
+.effect-steam .sticker-effect i,.effect-cloud .sticker-effect i { font-size:35px; filter:blur(2px); }
+@keyframes float-memory { from { opacity:0; transform:translateY(45px) rotate(-15deg); } 30% { opacity:.65; } to { opacity:0; transform:translateY(-30px) rotate(25deg); } }
+@container passport-page (max-width:230px) {
+  .sticker-grid { grid-template-rows:repeat(2,minmax(185px,1fr)); gap:18px; }
+  .trip-sticker { display:flex; flex-direction:column; aspect-ratio:auto; padding:10px; transform:none; }
+  .trip-sticker:nth-child(even) { transform:none; }
+  .sticker-body { display:block; padding:12px 0; flex:1; }
+  .sticker-text strong { font-size:15px; line-height:1.6; margin-top:6px; }
+  .trip-date { font-size:15px; font-variant-numeric:tabular-nums; }
+  .travel-stamp { position:absolute; right:8px; bottom:10px; width:32px; height:32px; border-width:2px; margin:0; opacity:.7; }
+  .travel-stamp :deep(.v-icon) { font-size:18px !important; }
+  .travel-stamp span { display:none; }
+  .trip-subtitle,.sticker-foot,.places-full { display:none; }
+  .places-compact { display:inline; }
+  .sticker-head { align-items:center; font-size:9px; padding-bottom:7px; }
+  .sticker-head>span:first-child { font-size:0; }
+  .sticker-head>span:first-child::after { content:'旅'; font-size:12px; }
+  .trip-places { display:flex; align-items:center; padding-right:34px; font-size:11px; min-height:34px; line-height:1.65; }
+  .next-memory { padding:12px 6px; font-size:12px; }
+  .next-memory small { display:none; }
+}
+@media(max-width:600px) {
+  .passport-page { padding:12px 9px; }
+  .page-number { font-size:8px; letter-spacing:0; }
+  .page-number>span:last-child { font-size:12px; }
+  .passport-page-heading { margin:14px 0 20px; }
+  .passport-page-heading h2 { font-size:20px; letter-spacing:.08em; }
+  .passport-page-heading>span { font-size:8px; letter-spacing:0; }
+  .passport-page-footer { flex-direction:column; align-items:flex-start; font-size:8px; line-height:1.6; padding-top:20px; }
+  .passport-page-footer>span:first-child { min-height:26px; }
+}
+@media(prefers-reduced-motion:reduce) { .trip-sticker,.sticker-effect i { animation:none!important; transition:none!important; } }
+
+.trip-sticker:focus-visible { outline:2px solid #527c78; outline-offset:4px; }

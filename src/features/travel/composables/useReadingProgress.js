@@ -139,6 +139,15 @@ export function useReadingProgress({ props, day, page, emit, runtime, L, reading
     window.addEventListener('resize', queueReading)
     queueReading()
   }
+  function jumpToChapter(index) {
+    if (!scrollRoot || !Number.isInteger(index) || index < 0 || index >= day.value.journal.length) return
+    const target = journeyEl.value.querySelector(`[data-chapter="${index}"]`)
+    if (!target) return
+    const top = scrollRoot.scrollTop + target.getBoundingClientRect().top - scrollRoot.getBoundingClientRect().top - 20
+    scrollRoot.scrollTo({ top: Math.max(0, top), behavior: props.motionEnabled ? 'smooth' : 'auto' })
+    target.querySelector('h4')?.focus({ preventScroll:true })
+    queueReading()
+  }
   function dispose() {
     disposed = true
     clearTimeout(cameraTimer)
@@ -148,7 +157,7 @@ export function useReadingProgress({ props, day, page, emit, runtime, L, reading
     emit('layout', false)
   }
   return { journeyEl, mapSlot, docked, slotHeight, readingChapter, readingLabel, chapterRoutes,
-    fitReadingSegment, updateReadingMap, queueReading, mount, dispose,
+    fitReadingSegment, updateReadingMap, queueReading, jumpToChapter, mount, dispose,
     get changingLayout() { return changingLayout },
     cancelCamera() { clearTimeout(cameraTimer) },
     resetRoute() { lastRoute = '__reset__' } }

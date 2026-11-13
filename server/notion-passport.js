@@ -70,7 +70,11 @@ export function assemblePassport({ trips, days, stops, chapters, places }) {
     const color = propertyText(trip, 'Color')
     const effect = propertyText(trip, 'Effect')
     const icon = propertyText(trip, 'Icon')
+    const country = propertyText(trip, 'Country')
+    const region = propertyText(trip, 'Region')
+    const city = propertyText(trip, 'City')
     return {
+      ...(country ? { country } : {}), ...(region ? { region } : {}), ...(city ? { city } : {}),
       id: trip.id, month: propertyText(trip, 'Month'), title: propertyText(trip, 'Name'), subtitle: propertyText(trip, 'Subtitle'), places: propertyText(trip, 'Destinations'),
       prefectures: related(trip, 'Places').map(id => names.get(id)).filter(Boolean), stamp: propertyText(trip, 'Stamp'),
       color: /^#[0-9a-f]{6}$/i.test(color) ? color : '#355c78', effect: ['lights', 'snow', 'petals', 'steam', 'cloud'].includes(effect) ? effect : 'lights',

@@ -18,8 +18,9 @@ test('journey keeps one map through docking, page changes and activation; teardo
   mockGlobal(t, 'document', { documentElement: { dataset: {} }, createElement: () => ({}), activeElement: null })
   mockGlobal(t, 'ResizeObserver', class { observe() {} disconnect() { disconnected++ } })
   mockGlobal(t, 'localStorage', { getItem: () => null })
+  const jumps = [], focused = []
   const scrollRoot = { scrollTop: 0, scrollHeight: 2000, clientHeight: 600, getBoundingClientRect: () => ({ top: 100 }),
-    addEventListener: (name, fn) => scrollEvents.set(name, fn), removeEventListener: name => scrollEvents.delete(name), scrollTo: noop }
+    addEventListener: (name, fn) => scrollEvents.set(name, fn), removeEventListener: name => scrollEvents.delete(name), scrollTo: options => jumps.push(options) }
   const control = { addTo() { return this }, remove: noop }
   const map = { on() { return this }, closePopup: noop, stop: noop, remove() { removed++ }, setView: noop,
     fitBounds() { fits++ }, invalidateSize: noop, getSize: () => ({ x: 400, y: 400 }) }
@@ -45,7 +46,8 @@ test('journey keeps one map through docking, page changes and activation; teardo
     state.mapEl.value = surface
     state.mapSlot.value = { offsetHeight: 300, getBoundingClientRect: () => ({ bottom, top: 0 }) }
     state.journeyEl.value = { closest: () => scrollRoot, getBoundingClientRect: () => ({ left: 0 }),
-      querySelector: () => null, querySelectorAll: () => [{ getBoundingClientRect: () => ({ top: 110, bottom: 300 }) }] }
+      querySelector: selector => selector === '[data-chapter="0"]' ? { getBoundingClientRect: () => ({ top:350 }), querySelector: () => ({ focus: options => focused.push(options) }) } : null,
+      querySelectorAll: () => [{ getBoundingClientRect: () => ({ top: 110, bottom: 300 }) }] }
     return state
   })
   const flush = async () => { const pending = [...frames.values()]; frames.clear(); for (const fn of pending) await fn(1000); await nextTick() }
@@ -53,6 +55,12 @@ test('journey keeps one map through docking, page changes and activation; teardo
   assert.equal(mounted.state.docked.value, true)
   assert.equal(mounted.state.readingLabel.value, '东京')
   assert.ok(routes > 0 && fits > 0)
+  mounted.state.jumpToChapter(0)
+  assert.deepEqual(jumps.at(-1), { top:230, behavior:'auto' }, 'directory targets the chapter inside the reader with a title offset')
+  assert.deepEqual(focused.at(-1), { preventScroll:true })
+  const jumpCount = jumps.length
+  mounted.state.jumpToChapter(-1); mounted.state.jumpToChapter(1)
+  assert.equal(jumps.length, jumpCount, 'ignore stale or invalid directory entries')
   bottom = 500
   scrollEvents.get('scroll')()
   await flush()

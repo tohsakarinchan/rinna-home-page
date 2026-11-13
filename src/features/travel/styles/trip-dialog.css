@@ -16,7 +16,72 @@
 .place-chips button[aria-pressed=true] { background:#eee3ad; color:#27353f; }
 .route-note { font-size:11px; opacity:.7; line-height:1.8; margin-top:14px; }
 .trip-dialog-footer { border-top:1px solid #fff2; padding:10px 20px; font-size:12px; }
+
+/* One translucent tint lets the blurred passport remain visible through the shell. */
+.passport-dialog.memory-glass { overflow:hidden!important; scrollbar-gutter:auto; }
+.passport-dialog.memory-glass { position:relative; background:linear-gradient(135deg,rgba(255,255,255,.56),rgba(232,239,225,.42) 52%,rgba(247,245,234,.52))!important; color:#294b43!important; border:0; border-radius:30px!important; -webkit-backdrop-filter:blur(18px) saturate(120%); backdrop-filter:blur(18px) saturate(120%); box-shadow:none!important; }
+.memory-glass .trip-dialog-header { padding:22px 24px 14px; }
+.memory-glass .eyebrow { color:#52685c; opacity:1; font-size:10px; }
+.memory-glass .trip-dialog-header h2 { font:400 27px/1.5 'Songti SC','SimSun',serif; margin-top:6px; }
+.memory-glass .trip-dialog-header :deep(.v-btn) { color:#294b43; background:#ffffff4d; border:1px solid #ffffff99; box-shadow:inset 0 1px 0 #ffffffc9,0 2px 7px #294b4309; }
+.memory-glass .trip-location-text { color:#52685c; }
+.memory-glass :deep(.japan-map-card) { padding:14px; border:1px solid #ffffff66; background:#f5f7ed20; border-radius:20px; -webkit-backdrop-filter:none; backdrop-filter:none; box-shadow:inset 0 1px 0 #ffffff66; }
+.memory-glass :deep(.map-title) { opacity:1; }
+.memory-glass :deep(.v-chip) { color:#294b43; background:#ffffff66; }
+.memory-glass .place-chips { gap:8px; }
+.memory-glass .place-chips button { min-height:44px; padding:9px 14px; color:#435e50; border:1px solid #ffffffa6; border-radius:24px; background:linear-gradient(145deg,#ffffff85,#ffffff33); box-shadow:inset 0 1px 0 #ffffffb3,0 2px 5px #294b4308; transition:background .18s,color .18s,box-shadow .18s; }
+.memory-glass .place-chips button:hover { background:#ffffffad; }
+.memory-glass .place-chips button[aria-pressed=true] { color:#f7f5ed; background:#294b43; border-color:#294b43; box-shadow:inset 0 1px 0 #ffffff33,0 3px 8px #294b4320; }
+.memory-glass .place-chips button:focus-visible { outline:2px solid #294b43; outline-offset:3px; }
+.memory-glass .route-note { color:#52685c; opacity:1; }
+.memory-glass .trip-dialog-footer { padding:12px 20px; border-color:#294b431c; background:#ffffff1a; color:#435e50; }
+.memory-glass .trip-dialog-footer>div { display:flex; gap:3px; align-items:center; padding:3px; border:1px solid #ffffff99; border-radius:24px; background:#ffffff40; box-shadow:inset 0 1px 0 #ffffff99; }
+.memory-glass .trip-dialog-footer :deep(.v-btn) { min-height:38px; }
+@supports not (backdrop-filter:blur(1px)) { .passport-dialog.memory-glass { background:#e8ecdf!important; } }
+@media(prefers-reduced-transparency:reduce) { .passport-dialog.memory-glass { background:#e8ecdf!important; -webkit-backdrop-filter:none; backdrop-filter:none; } }
+@media(prefers-reduced-motion:reduce) { .memory-glass .place-chips button { transition:none; } }
+.journey-reader { --surface-paper:rgba(248,245,236,.96); }
+.journey-reader .trip-dialog-header { padding:16px 22px 12px; align-items:flex-start; }
+.journey-reader .trip-dialog-header>div { min-width:0; }
+.journey-reader .trip-dialog-header h2 { font-size:23px; line-height:1.5; margin-top:4px; overflow-wrap:anywhere; }
+.journey-reader .trip-dialog-body { padding:0 16px 16px; }
+.journey-reader .journey-map-host { right:16px; top:96px; bottom:16px; width:calc(36% - 16px); padding:14px; border-radius:16px; background:#f7f5ecb3; border:1px solid #ffffff66; }
+.journey-reader.journey-split .trip-dialog-body { margin:0 calc(36% + 12px) 16px 16px; padding:0; background:var(--surface-paper); border-radius:16px; scrollbar-color:#81958f transparent; }
+.journey-reader .trip-dialog-body,.journey-reader.journey-split .trip-dialog-body { scrollbar-width:auto; scrollbar-color:auto; }
+.journey-reader .trip-dialog-body::-webkit-scrollbar { width:6px; }
+.journey-reader .trip-dialog-body::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.journey-reader .trip-dialog-body::-webkit-scrollbar-track { background:transparent; margin-block:14px; }
+.journey-reader .trip-dialog-body::-webkit-scrollbar-thumb { background:#81958f; border-radius:6px; }
+.journey-reader :deep(.daily-journey),.journey-reader :deep(.bookend) { padding:20px; border-radius:16px; }
+.journey-reader :deep(.day-pager) { padding-bottom:12px; gap:12px; }
+.journey-reader :deep(.day-pager button) { width:44px; height:44px; flex-shrink:0; background:#ffffff55; }
+.journey-reader :deep(.day-title) { padding:20px 0 18px; }
+.journey-reader :deep(.day-title h2) { font-size:28px; line-height:1.5; }
+.journey-reader :deep(.day-journal) { max-width:680px; margin-top:28px; }
+.journey-reader :deep(.day-journal section p) { font-size:15px; line-height:2; }
+.journey-reader :deep(.reading-map-heading) { gap:6px; padding-bottom:12px; }
+.journey-reader :deep(.reading-map-heading strong) { min-height:0; font-size:18px; }
+.journey-reader :deep(.chapter-photos img) { aspect-ratio:auto; height:auto; max-height:680px; object-fit:contain; background:transparent; border-radius:5px; }
+.journey-reader :deep(.trip-details>div) { border-color:#294b4324; }
+.journey-reader :deep(.begin-story) { border-color:#294b4340; background:#ffffff55; min-height:44px; }
 @media(max-width:600px) {
   .trip-dialog-body { padding:0 14px 14px; }
   .trip-dialog-header { padding:16px; }
+  .passport-dialog.memory-glass { border-radius:24px!important; }
+  .memory-glass .trip-dialog-header { padding:18px 16px 12px; }
+  .memory-glass .trip-dialog-header h2 { font-size:24px; }
+  .memory-glass :deep(.japan-map-card) { padding:10px; border-radius:16px; }
+  .memory-glass .trip-dialog-footer { padding:10px 14px; flex-wrap:wrap; }
+  .memory-glass .trip-dialog-footer :deep(.v-btn) { min-height:44px; }
+  .journey-reader-overlay :deep(.v-overlay__content) { margin:8px!important; width:calc(100% - 16px)!important; max-width:calc(100% - 16px)!important; max-height:calc(100% - 16px)!important; }
+  .passport-dialog.journey-reader { max-height:calc(100dvh - 16px); border-radius:20px!important; }
+  .journey-reader .trip-dialog-header { padding:14px 14px 10px; gap:8px; }
+  .journey-reader .trip-dialog-header h2 { font-size:19px; line-height:1.5; }
+  .journey-reader .trip-dialog-header :deep(.v-btn) { flex-shrink:0; }
+  .journey-reader .trip-dialog-body { padding:0 6px 8px; margin-right:0; }
+  .journey-reader :deep(.daily-journey),.journey-reader :deep(.bookend) { padding:16px 12px; border-radius:14px; }
+  .journey-reader :deep(.day-title h2) { font-size:25px; }
+  .journey-reader :deep(.day-pager strong) { font-size:20px; }
+  .journey-reader :deep(.map-help) { font-size:10px; }
+  .journey-reader :deep(.chapter-photos) { gap:18px; }
 }

@@ -2,10 +2,10 @@
   <section class="trip-overview" aria-label="旅行概览">
     <div class="overview-stamp" :style="{ color: trip.color }"><v-icon :icon="trip.icon" size="28"/><span>{{ trip.stamp }}</span><strong>{{ trip.month }}</strong></div>
     <p class="destinations">{{ trip.places }}</p>
-    <JapanPrefectureMap overview :visited-prefectures="trip.prefectures" :landmarks="landmarks"/>
+    <JapanPrefectureMap v-if="mapEnabled" overview palette="paper" :visited-prefectures="trip.prefectures || []" :landmarks="landmarks"/>
     <dl class="trip-details">
       <div><dt>游玩日期</dt><dd>{{ dateLabel }}<small v-if="dates.length">按已整理的每日记录显示</small></dd></div>
-      <div><dt>到访地区</dt><dd>{{ trip.prefectures.join(' · ') }}</dd></div>
+      <div><dt>到访地区</dt><dd>{{ trip.prefectures?.join(' · ') || trip.region || trip.city || trip.places || '待整理' }}</dd></div>
     </dl>
     <button v-if="trip.days?.length" class="begin-story" @click="$emit('begin')">翻开序言 →</button>
   </section>
@@ -14,7 +14,7 @@
 import { computed } from 'vue'
 import JapanPrefectureMap from '../../../shared/components/geography/JapanPrefectureMap.vue'
 import { tripLandmarks } from '../data/trip-landmarks.js'
-const props = defineProps({ trip: { type: Object, required: true } })
+const props = defineProps({ trip: { type: Object, required: true }, mapEnabled: { type: Boolean, default: true } })
 defineEmits(['begin'])
 const landmarks = computed(() => tripLandmarks(props.trip))
 const dates = computed(() => [...new Set((props.trip.days || []).map(day => day.date).filter(Boolean))].sort())

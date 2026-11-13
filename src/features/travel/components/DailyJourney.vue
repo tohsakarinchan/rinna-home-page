@@ -11,9 +11,10 @@
     <div ref="mapSlot" class="map-slot" :style="docked ? { height: slotHeight + 'px' } : {}">
       <Teleport :to="mapHost || 'body'" :disabled="!docked || !mapHost">
         <div ref="readingMapEl" class="reading-map" :class="{ docked, 'motion-off': !motionAllowed }">
-          <div v-if="docked" class="reading-map-heading"><span>沿着文字，重访这一天</span><Transition name="reading-label" mode="out-in"><strong :key="readingLabel">{{ readingLabel }}</strong></Transition><small>本段地图固定 · 点击站点查看详情</small></div>
+          <div v-if="docked" class="reading-map-heading"><span>沿着文字，重访这一天</span><Transition name="reading-label" mode="out-in"><strong :key="readingLabel">{{ readingLabel }}</strong></Transition></div>
     <div ref="mapEl" class="street-map" role="region" tabindex="0" :aria-label="docked ? '本段街道地图，视野固定，可点击站点查看详情' : '当日街道地图，可用加减键缩放和方向键移动'" @keydown.esc.stop="closeCard"/>
           <p v-if="docked" class="reading-map-caption">虚线为站点连接示意，非实际交通路线。金色地点待确认。</p>
+          <ReadingToc v-if="docked && day.journal.length" :chapters="day.journal" :active="readingChapter" :motion-enabled="motionAllowed" @select="jumpToChapter" />
         </div>
       </Teleport>
     </div>
@@ -36,7 +37,7 @@
     <p class="map-caption">编号按你提供的顺序排列。虚线仅连接站点，不代表实际道路或乘车路线；金色标记为待确认地点。</p>
     <div class="day-stops" aria-label="当日停靠点"><button v-for="(stop, index) in day.stops" :key="stop.id" :class="{ chosen: active === stop.id, provisional: stop.provisional }" :aria-pressed="active === stop.id" @click="focusStop(stop)"><b>{{ String(index + 1).padStart(2, '0') }}</b><span>{{ stop.name }}<small>{{ stop.category }}{{ stop.provisional ? ' · 待确认' : '' }}</small></span></button></div>
     <div v-if="selectedStop" class="stop-note" aria-live="polite"><strong>{{ selectedStop.name }}</strong><p>{{ selectedStop.note }}</p><a v-if="selectedStop.source" :href="selectedStop.source" target="_blank" rel="noopener noreferrer">查看 Anitabi 参考 ↗</a></div>
-    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4>{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><div v-if="failedPhotos.has(photo.url)" class="photo-unavailable" role="status"><p>照片暂时无法加载，文字仍可继续阅读。</p><button type="button" @click="failedPhotos.delete(photo.url)">重新加载照片</button></div><a v-else :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
+    <article class="day-journal"><header><span>FIELD NOTES / {{ String(day.day).padStart(2, '0') }}</span><h3>{{ day.journalTitle }}</h3><p>{{ day.journalNotice }}</p></header><section v-for="(chapter, index) in day.journal" :key="chapter.heading" :data-chapter="index" :class="{ 'reading-chapter': docked && readingChapter === index }"><h4 tabindex="-1">{{ chapter.heading }}</h4><p>{{ chapter.text }}</p><div v-if="photosForChapter(index).length" class="chapter-photos"><figure v-for="photo in photosForChapter(index)" :key="photo.url"><div v-if="failedPhotos.has(photo.url)" class="photo-unavailable" role="status"><p>照片暂时无法加载，文字仍可继续阅读。</p><button type="button" @click="failedPhotos.delete(photo.url)">重新加载照片</button></div><a v-else :href="photo.url" target="_blank" rel="noopener noreferrer" :aria-label="'查看大图：' + photo.alt"><img :src="photo.url" :alt="photo.alt" loading="lazy" decoding="async" @error="failedPhotos.add(photo.url)" @load="revealPhoto" /></a><figcaption>{{ photo.alt }}<span v-if="photo.credit"> · {{ photo.credit }}</span><a v-if="photo.source" :href="photo.source" target="_blank" rel="noopener noreferrer">原相册 ↗</a></figcaption></figure></div></section><p v-if="!day.journal.length">这一天的游记正在整理中。</p></article>
     <details class="day-references"><summary>地点校对与资料来源</summary><p>{{ day.locationNotice }}</p><p><template v-for="(reference, index) in day.references" :key="index"><a v-if="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">{{ reference.text }}</a><span v-else>{{ reference.text }}</span></template></p></details>
     <footer class="day-end"><span>{{ page + 1 }} / {{ days.length }} 页已整理</span></footer>
     <nav class="bottom-pager" aria-label="正文底部翻页">
@@ -49,6 +50,7 @@
 
 <script setup>
 import { computed, ref, reactive } from 'vue'
+import ReadingToc from './ReadingToc.vue'
 import { cityStops } from '../data/journey-stories.js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -62,7 +64,7 @@ const weekday = computed(() => new Intl.DateTimeFormat('zh-CN', { weekday: 'long
 
 const { mapEl, active, selectedStop, tileError, previewStop, previewIndex, popupHost, photoFailed,
   cancelClose, closeCard, scheduleClose, focusStop, fit, retryTiles, revealPhoto, updatePopup,
-  readingMapEl, motionAllowed, journeyEl, mapSlot, docked, slotHeight, readingChapter, readingLabel, chapterRoutes,
+  readingMapEl, motionAllowed, journeyEl, mapSlot, docked, slotHeight, readingChapter, readingLabel, chapterRoutes, jumpToChapter,
 } = useJourneyMap(props, day, page, emit, { L })
 function turn(delta) {
   const next = page.value + delta
@@ -91,7 +93,8 @@ function photosForChapter(index) {
 .reading-label-leave-to { opacity:0; transform:translateY(-3px); }
 .motion-off :deep(.day-pin),.motion-off .day-journal section,.motion-off .reading-label-enter-active,.motion-off .reading-label-leave-active { transition:none; }
 :deep(.day-pin) { transition:opacity 280ms ease,box-shadow 350ms ease,background-color 250ms ease; }
-.day-journal section { transition:box-shadow 300ms ease; }
+.day-journal h4 { position:relative; }
+.day-journal section.reading-chapter h4::before { content:''; position:absolute; left:-11px; top:.38em; height:.8em; width:3px; background:#34594f; border-radius:2px; }
 .chapter-photos a:focus-visible { outline:2px solid #34594f; outline-offset:4px; }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none !important; animation:none !important; } }
 .chapter-photos { display:grid; gap:20px; margin:24px 0 36px; }
@@ -102,12 +105,12 @@ function photosForChapter(index) {
 .reading-map.docked { height:100%; display:flex; flex-direction:column; }
 .reading-map-heading { display:grid; gap:10px; padding:4px 0 16px; }
 .reading-map-heading > span { font-size:11px; letter-spacing:.12em; color:#6d7b6d; }
-.reading-map-heading strong { min-height:3.4em; font:19px/1.7 Georgia,'Songti SC',serif; }
+.reading-map-heading strong { min-height:1.7em; font:19px/1.7 Georgia,'Songti SC',serif; }
 .reading-map-heading small,.reading-map-heading button { font-size:11px; text-align:left; }
 .reading-map-heading button { color:#34594f; text-decoration:underline; }
-.docked .street-map { flex:1; min-height:160px; height:auto; }
+/* Fit the full card plus map edges and attribution, rather than shrinking the card. */
+.docked .street-map { flex:0 0 min(388px,calc(48dvh - 8px)); height:min(388px,calc(48dvh - 8px)); min-height:0; }
 .reading-map-caption { font-size:10px; line-height:1.8; margin:10px 0 0; }
-.day-journal section.reading-chapter { box-shadow:-12px 0 0 -10px #799884; }
 :deep(.day-pin.reading-pin) { box-shadow:0 0 0 5px #c9d9bd,0 2px 9px #1235; }
 :deep(.day-pin.future-pin) { opacity:.4; }
 .daily-journey { color:var(--text-paper); background:var(--surface-paper); border-radius:18px; overflow:hidden; padding:24px; }
@@ -162,6 +165,11 @@ button:focus-visible { outline:3px solid #58a7af; outline-offset:3px; }
 :deep(.journey-popup.preview-shifted .leaflet-popup-tip-container) { display:none; }
 :deep(.journey-popup a.leaflet-popup-close-button) { top:6px; right:6px; width:28px; height:28px; border-radius:50%; background:#fffdf5; color:var(--text-paper); font:22px/28px sans-serif; z-index:2; }
 .place-card { max-height:min(340px,calc(48dvh - 56px)); overflow:auto; overscroll-behavior:contain; font-family:inherit; border-radius:14px; }
+.place-card { scrollbar-width:auto; scrollbar-color:auto; }
+.place-card::-webkit-scrollbar { width:5px; }
+.place-card::-webkit-scrollbar-button { display:none; width:0; height:0; }
+.place-card::-webkit-scrollbar-track { background:transparent; margin-block:12px; }
+.place-card::-webkit-scrollbar-thumb { background:#81958f; border-radius:5px; }
 .place-photo { height:94px; position:relative; background:#e6e8dd; }
 .place-photo img { width:100%; height:100%; object-fit:cover; display:block; }
 .photo-placeholder { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; background:repeating-linear-gradient(135deg,transparent 0 9px,#68877609 9px 10px),radial-gradient(ellipse at top right,#e1d5b5,transparent 75%); color:#6b7e6e; }

@@ -4,7 +4,24 @@ import { mountComposable, mockGlobal } from './helpers/vue.js'
 import { useMotionPreferences } from '../src/shared/composables/useMotionPreferences.js'
 import { ref, effectScope } from 'vue'
 import { usePassportNavigation } from '../src/features/travel/composables/usePassportNavigation.js'
-import { passportSpreads, latestTrip } from '../src/features/travel/domain/passport-layout.js'
+import { passportSpreads, latestTrip, passportPageStacks } from '../src/features/travel/domain/passport-layout.js'
+
+test('paper stacks transfer leaves between sides and bound large collection depth', () => {
+  assert.deepEqual(passportPageStacks(0, 0), { leftLeaves:0, rightLeaves:0, leftDepth:0, rightDepth:0 })
+  assert.equal(passportPageStacks(1, 0).rightDepth, 0)
+  for (const count of [2, 3, 12, 100]) {
+    for (let index = 0; index < count; index++) {
+      const stack = passportPageStacks(count, index)
+      assert.equal(stack.leftLeaves + stack.rightLeaves, count - 1)
+      assert.equal(stack.leftLeaves, index)
+      assert.equal(stack.rightLeaves, count - index - 1)
+      assert.ok(stack.leftDepth <= 12 && stack.rightDepth <= 12)
+    }
+    assert.equal(passportPageStacks(count, 0).leftDepth, 0)
+    assert.equal(passportPageStacks(count, count - 1).rightDepth, 0)
+    assert.equal(passportPageStacks(count, count + 1).leftLeaves, count - 1)
+  }
+})
 
 test('stickers remain on individual pages, including incomplete spreads', () => {
   for (const count of [0, 1, 2, 3, 4, 5, 9]) {
@@ -114,4 +131,56 @@ test('touch swipes turn four-card spreads without turning on scroll, taps or can
   assert.equal(state.spreadIndex.value, 0)
   swipe(310, 100)
   assert.equal(state.spreadIndex.value, 0, 'first spread cannot swipe backwards')
+})
+
+test('two-sided leaves show the correct old front and new back in both directions', t => {
+  const scope = effectScope(); t.after(() => scope.stop())
+  const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
+  const effects = ref(true), state = scope.run(() => usePassportNavigation(spreads, effects))
+  state.turnPage(1)
+  assert.equal(state.turnLayer.value.front[0].number, 3)
+  assert.equal(state.turnLayer.value.back[0].number, 5)
+  assert.equal(state.turnLayer.value.stationary[0].number, 1)
+  state.turnPage(1)
+  assert.equal(state.spreadIndex.value, 1)
+  state.finishTurn()
+  assert.equal(state.turnLayer.value, null)
+  state.turnPage(-1)
+  assert.equal(state.turnLayer.value.front[0].number, 5)
+  assert.equal(state.turnLayer.value.back[0].number, 3)
+  assert.equal(state.turnLayer.value.stationary[0].number, 7)
+  state.finishTurn()
+})
+
+test('mouse and touch drag progress, short-drag return, preference changes and disposal', async t => {
+  const pending = new Map(); let id = 0
+  mockGlobal(t, 'setTimeout', fn => { pending.set(++id, fn); return id })
+  mockGlobal(t, 'clearTimeout', key => pending.delete(key))
+  const scope = effectScope(); t.after(() => scope.stop())
+  const spreads = ref(passportSpreads(Array.from({ length: 9 }, (_, id) => ({ id }))))
+  const effects = ref(true), state = scope.run(() => usePassportNavigation(spreads, effects))
+  const surface = { clientWidth: 400, setPointerCapture() {} }
+  const event = (x, y = 100) => ({ clientX:x, clientY:y, pointerId:1, pointerType:'mouse', button:0, isPrimary:true, currentTarget:surface })
+  state.startSwipe(event(250)); state.moveSwipe(event(225))
+  assert.equal(state.dragProgress.value, .125)
+  assert.equal(state.spreadIndex.value, 0, 'preview does not commit a page')
+  state.endSwipe(event(225))
+  assert.equal(state.returning.value, true)
+  assert.equal(state.turning.value, true)
+  state.finishTurn()
+  assert.equal(state.spreadIndex.value, 0)
+  state.startSwipe(event(250)); state.moveSwipe(event(100)); state.endSwipe(event(100))
+  assert.equal(state.spreadIndex.value, 1)
+  assert.equal(state.dragProgress.value, .75)
+  assert.ok(state.duration.value < 720)
+  effects.value = false; await Promise.resolve()
+  assert.equal(state.turnLayer.value, null)
+  assert.equal(state.turning.value, false)
+  assert.equal(pending.size, 0)
+  effects.value = true; await Promise.resolve()
+  state.turnPage(1)
+  assert.equal(state.turnLayer.value.back[0].number, 9)
+  assert.equal(pending.size, 1)
+  scope.stop()
+  assert.equal(pending.size, 0, 'unmount clears the fallback timer')
 })

@@ -7,9 +7,14 @@
 | 确认协作规则 | [AGENTS](AGENTS.md) 及目标目录适用规则 | 长期约定变化时更新规则 |
 | 了解或使用项目 | [README](README.md) | 能力或基本使用方式变化时 |
 | 接续工作、确认验证状态 | [NOW](docs/context/NOW.md) | 当前目标、进度或阻塞实质变化时 |
+| 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
+| 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
+| 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
 | 定位页面、接口、配置、部署入口 | [MAP](docs/context/MAP.md) | 路径、版本或映射变化时 |
 | 本地运行、测试、构建、内容维护 | [RUNBOOK](docs/context/RUNBOOK.md) 的对应操作 | 操作方法或前置条件变化时 |
 | 理解已确认选择 | [DECISIONS](docs/context/DECISIONS.md) 的相关决策 | 决策确认或被替代时 |
+| 调整美术、动效、交互，查找审美参考 | [审美参考网站](docs/design-references.md) | 用户新增或调整参考来源时 |
+| 接续三空间、控制中心、国家入口与场景过场 | [三空间与旅行架构](docs/three-spaces.md) | 需求、页面接口或阶段边界实质变化时；需求正文只保留在专题 |
 | 核对问题与验证缺口 | [RISKS](docs/context/RISKS.md) 的相关条目 | 风险证据或状态变化时 |
 | 编辑旅行数据、照片、迁移约束 | [旅行护照交接](docs/passport-preview-handoff.md#内容在哪里编辑)；照片补充见 [滚动游记](docs/scroll-journey-progress.md) | 沿用已有专题，不复制数据库字段 |
 | 修改滚动游记、地图联动 | [滚动游记与照片管理](docs/scroll-journey-progress.md) | 该专题的行为或维护约定变化时 |

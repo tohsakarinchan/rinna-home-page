@@ -54,7 +54,7 @@ export function useJourneyMap(props, day, page, emit, { L }) {
       const bounds = mapEl.value.getBoundingClientRect()
       const card = element.getBoundingClientRect()
       let dx = Math.max(bounds.left + 10 - card.left, Math.min(0, bounds.right - 10 - card.right))
-      const dy = Math.max(bounds.top + 10 - card.top, Math.min(0, bounds.bottom - 10 - card.bottom))
+      const dy = Math.max(bounds.top + 10 - card.top, Math.min(0, bounds.bottom - 28 - card.bottom))
       if (dy > 0) {
         const sideShift = card.width / 2 + 24
         if (card.right + sideShift < bounds.right - 10) dx = sideShift
@@ -216,6 +216,7 @@ export function useJourneyMap(props, day, page, emit, { L }) {
   return { mapEl, active, selectedStop, tileError, previewStop, previewIndex, popupHost, photoFailed,
     cancelClose, closeCard, scheduleClose, focusStop, fit, retryTiles, revealPhoto,
     readingMapEl, motionAllowed, journeyEl, mapSlot, docked, slotHeight, readingChapter, readingLabel, chapterRoutes,
+    jumpToChapter: reading.jumpToChapter,
     updatePopup: () => popup?.update() }
 
 }

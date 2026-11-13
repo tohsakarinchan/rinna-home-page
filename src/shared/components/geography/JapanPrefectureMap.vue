@@ -1,5 +1,5 @@
 <template>
-    <div class="japan-map-card" :class="{ 'compact-map': compact, 'souvenir-map': overview && landmarks.length }">
+    <div class="japan-map-card" :class="{ 'compact-map': compact, 'souvenir-map': overview && landmarks.length, 'paper-map': palette === 'paper' }">
         <div v-if="overview && landmarks.length" class="souvenir-heading"><span>旅途的微缩收藏</span><small>PLACES, IN MINIATURE</small></div>
         <div v-if="!compact && !overview" class="d-flex align-center justify-space-between mb-2">
             <span class="map-title">
@@ -79,6 +79,7 @@ import { layoutLandmarks } from '../../domain/geography/landmark-layout.js'
 const props = defineProps({
     compact: { type: Boolean, default: false },
     overview: { type: Boolean, default: false },
+    palette: { type: String, default: 'dark' },
     visitedPrefectures: { type: Array, default: () => [] },
     activePrefecture: { type: String, default: '' },
     landmarks: { type: Array, default: () => [] },
@@ -236,9 +237,9 @@ function buildOption() {
             name, 
             value: 2,
             itemStyle: {
-                shadowBlur: 20,
-                shadowColor: 'rgba(255, 228, 109, 0.95)',
-                borderColor: 'rgba(255, 255, 255, 1)',
+                shadowBlur: props.palette === 'paper' ? 0 : 20,
+                shadowColor: props.palette === 'paper' ? 'transparent' : 'rgba(255, 228, 109, 0.95)',
+                borderColor: props.palette === 'paper' ? '#294b43' : 'rgba(255, 255, 255, 1)',
                 borderWidth: 2,
             }
         }
@@ -247,14 +248,14 @@ function buildOption() {
             value: 1,
             ...(props.overview ? { label: {
                 show: true,
-                color: '#fffdf5',
+                color: props.palette === 'paper' ? '#294b43' : '#fffdf5',
                 fontSize: 12,
                 fontWeight: 600,
-                textBorderColor: 'var(--text-paper)',
+                textBorderColor: props.palette === 'paper' ? '#f5f2e7' : '#304b48',
                 textBorderWidth: 3,
             } } : {}),
         }
-        return { name, value: 0 }
+        return { name, value: 0, ...(props.palette === 'paper' ? { itemStyle: { borderColor:'#687e68', borderWidth:.75 } } : {}) }
     })
 
     return {
@@ -271,7 +272,7 @@ function buildOption() {
             min: 0,
             max: 2,
             inRange: {
-                color: [
+                color: props.palette === 'paper' ? ['#8b9b88', '#294b43', '#aa5145'] : [
                     'rgba(255,255,255,0.13)',  // 0: 未访问
                     'rgba(75,218,190,0.7)',    // 1: 已访问
                     'rgba(255,228,109,0.95)', // 2: 当前激活
@@ -294,22 +295,22 @@ function buildOption() {
             data: seriesData,
             nameProperty: 'name',           // 对应 GeoJSON properties.name
             itemStyle: {
-                borderColor: 'rgba(255,255,255,0.35)',
+                borderColor: props.palette === 'paper' ? '#f5f2e7' : 'rgba(255,255,255,0.35)',
                 borderWidth: 0.8,
             },
             emphasis: {
                 itemStyle: {
-                    borderColor: 'rgba(255,255,255,1)',
+                    borderColor: props.palette === 'paper' ? '#f5f2e7' : 'rgba(255,255,255,1)',
                     borderWidth: 1.8,
-                    areaColor: 'rgba(255,228,109,0.9)',
-                    shadowBlur: 12,
-                    shadowColor: 'rgba(255, 228, 109, 0.8)'
+                    areaColor: props.palette === 'paper' ? '#aa5145' : 'rgba(255,228,109,0.9)',
+                    shadowBlur: props.palette === 'paper' ? 0 : 12,
+                    shadowColor: props.palette === 'paper' ? 'transparent' : 'rgba(255, 228, 109, 0.8)'
                 },
                 label: { show: false },
             },
             select: {
                 itemStyle: { 
-                    areaColor: 'rgba(255,228,109,0.95)'
+                    areaColor: props.palette === 'paper' ? '#aa5145' : 'rgba(255,228,109,0.95)'
                 },
                 label: { show: false },
             },
@@ -418,7 +419,7 @@ function updateChart() {
 
 // 监听 props 变化，局部更新 series（不重新注册地图）
 watch(
-    () => [props.visitedPrefectures, props.activePrefecture, props.landmarks],
+    () => [props.visitedPrefectures, props.activePrefecture, props.landmarks, props.palette],
     updateChart,
     { deep: true }
 )
@@ -447,6 +448,14 @@ onUnmounted(() => {
 <style scoped>
 .map-attribution { margin:8px 0 0; font-size:10px; line-height:1.6; opacity:.75; }
 .map-attribution a { color:inherit; text-decoration:underline; }
+.paper-map { color:#294b43; }
+.paper-map .map-attribution,.paper-map .map-legend { color:#51665a; opacity:1; }
+.paper-map .dot.active { background:#aa5145; }
+.paper-map .dot.visited { background:#294b43; }
+.paper-map .dot.default { background:#8b9b88; }
+.paper-map .souvenir-heading,.paper-map .souvenir-caption p { color:#294b43; }
+.paper-map .souvenir-heading small,.paper-map .souvenir-kicker,.paper-map .souvenir-caption small { color:#52685c; opacity:1; }
+.paper-map .souvenir-caption { border-color:#294b4324; }
 .japan-map-card {
     margin-top: 12px;
     padding: 12px;

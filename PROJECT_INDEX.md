@@ -8,8 +8,6 @@
 | 了解或使用项目 | [README](README.md) | 能力或基本使用方式变化时 |
 | 接续工作、确认验证状态 | [NOW](docs/context/NOW.md) | 当前目标、进度或阻塞实质变化时 |
 | 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
-| 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
-| 另一台电脑接手主页美术 | [临时接力文件](HANDOFF_NEXT_COMPUTER.md) | 接手完成并归位必要信息后删除此文件及本行 |
 | 定位页面、接口、配置、部署入口 | [MAP](docs/context/MAP.md) | 路径、版本或映射变化时 |
 | 本地运行、测试、构建、内容维护 | [RUNBOOK](docs/context/RUNBOOK.md) 的对应操作 | 操作方法或前置条件变化时 |
 | 理解已确认选择 | [DECISIONS](docs/context/DECISIONS.md) 的相关决策 | 决策确认或被替代时 |
